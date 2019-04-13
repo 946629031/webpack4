@@ -12,9 +12,11 @@ webpack4 各种语法 入门讲解
 
 - 2-1 为什么会出现webpack?
     - 发展到现在，前端项目越来越复杂，业务逻辑越来越多，已经不是仅仅几个 html js css 文件能处理得了的。即使处理的了，可维护性也很差。
+
 - 2-2 webpack 是什么？
     - 模块打包工具
     - 打包命令： npx webpack index.js
+    
 - 2-3 Webpack 的正确安装方式
     - 环境依赖 node.js , npm
     - 项目初始化：npm -init -y
