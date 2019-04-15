@@ -17,8 +17,8 @@ webpack4 各种语法 入门讲解
 - 2-2 webpack 是什么？
     - 模块打包工具
     - 打包命令： 
-        - npx webpack index.js  (局部安装)
-        - webpack input.js output.js (全局安装)
+        - ```npx webpack index.js```  (局部安装)
+        - ```webpack input.js output.js``` (全局安装)
     
 - 2-3 Webpack 的正确安装方式
     - 环境依赖 node.js , npm
@@ -40,7 +40,7 @@ webpack4 各种语法 入门讲解
         - ```webpack -v```        (全局安装命令)
     - Webpack 文件上传github仓库
         - 一般情况下，都会把项目中的 node_modules文件夹 删除
-         - npm install 该命令可以自动把项目依赖包下载好
+         - ```npm install``` 可以自动把项目依赖包下载好
 - 2-4 使用webpack的配置文件
     - ```npx webpack index.js```
         - 这条命令，实际上是使用webpack的默认配置，且入口文件是index.js
@@ -68,7 +68,7 @@ webpack4 各种语法 入门讲解
            |- index.html
         ```
     - npm run bundle 打包命令
-        - 问题：如何自定义打包命令的名称呢？例如把打包命令改成'npm run bundle'，而不是'npx webpack'
+        - 问题：如何自定义打包命令的名称呢？例如把打包命令改成```npm run bundle```，而不是```npx webpack```
         - 在 package.json 文件中
             ```js
             ...
@@ -79,4 +79,4 @@ webpack4 各种语法 入门讲解
             ```
             npm script 中的'webpack'会优先到本地(局部)的node_modules中查找webpack模块，如果没有才会去全局中查找
     - 手动指定配置文件
-        - npx webpack --config config_file_name.js
+        - ```npx webpack --config config_file_name.js```
