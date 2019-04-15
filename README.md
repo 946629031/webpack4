@@ -22,22 +22,22 @@ webpack4 各种语法 入门讲解
     
 - 2-3 Webpack 的正确安装方式
     - 环境依赖 node.js , npm
-    - 项目初始化：npm -init -y
+    - 项目初始化：```npm -init -y```
         - 要想用webpack管理项目，要先让项目符合node的规范
         - 生成 package.json
     - 安装命令
-        - npm i webpack webpack-cli -D                  (简写)
-        - npm install webpack webpack-cli --save-dev    (全写)
+        - ```npm i webpack webpack-cli -D```                  (简写)
+        - ```npm install webpack webpack-cli --save-dev```    (全写)
         - 全局安装 存在的问题
-            - npm install webpack webpack-cli -g
-            - npm uninstall webpack webpack-cli -g      (卸载全局安装)
+            - ```npm install webpack webpack-cli -g```
+            - ```npm uninstall webpack webpack-cli -g```      (卸载全局安装)
             - 非常不推荐全局安装 webpack
             - 原因：假如我有两个项目，一个是webpack4打包的，另一个是webpack3打包的。由于我是全局安装webpack4的，那么webpack3打包的项目是运行不起来的
         - webpack-cli 的作用
             - webpack-cli 使得 webpack index.js 或者 npx webpack 这样的命令能够在命令行中运行
     - 安装后检查是否安装成功
-        - npx webpack -v    (局部安装命令)
-        - webpack -v        (全局安装命令)
+        - ```npx webpack -v```    (局部安装命令)
+        - ```webpack -v```        (全局安装命令)
     - Webpack 文件上传github仓库
         - 一般情况下，都会把项目中的 node_modules文件夹 删除
          - npm install 该命令可以自动把项目依赖包下载好
