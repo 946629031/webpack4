@@ -42,7 +42,7 @@ webpack4 各种语法 入门讲解
         - 一般情况下，都会把项目中的 node_modules文件夹 删除
          - npm install 该命令可以自动把项目依赖包下载好
 - 2-4 使用webpack的配置文件
-    - npx webpack index.js
+    - ```npx webpack index.js```
         - 这条命令，实际上是使用webpack的默认配置，且入口文件是index.js
     - webpack.config.js 配置文件
         - 当配置文件 配置好后，打包命令为：npx webpack
