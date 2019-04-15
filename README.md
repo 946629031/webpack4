@@ -36,8 +36,8 @@ webpack4 各种语法 入门讲解
         - webpack-cli 的作用
             - webpack-cli 使得 webpack index.js 或者 npx webpack 这样的命令能够在命令行中运行
     - 安装后检查是否安装成功
-        - ```npx webpack -v```    (局部安装命令)
-        - ```webpack -v```        (全局安装命令)
+        - ```npx webpack -v```    检查局部安装
+        - ```webpack -v```        检查全局安装
     - Webpack 文件上传github仓库
         - 一般情况下，都会把项目中的 node_modules文件夹 删除
          - ```npm install``` 可以自动把项目依赖包下载好
@@ -50,13 +50,17 @@ webpack4 各种语法 入门讲解
             const path = require('path')
 
             module.exports = {
-                entry: './src/index.js',
+                mode: 'production', // development
+                entry: {
+                    main: './src/index.js'
+                },
+                // entry: './src/index.js', 简写
                 output: {
                     filename: 'bundle.js',
                     path: path.resolve(__dirname, 'dist')
                 }
             }
-            ```
+        ```
     - 目录结构
         ```
         webpack-demo
