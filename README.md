@@ -78,3 +78,5 @@ webpack4 各种语法 入门讲解
             ...
             ```
             npm script 中的'webpack'会优先到本地(局部)的node_modules中查找webpack模块，如果没有才会去全局中查找
+    - 手动指定配置文件
+        - npx webpack --config config_file_name.js
