@@ -344,7 +344,7 @@ webpack4 各种语法 入门讲解
             ```
         - 问题：
             - 1.在入口文件index.js中，引入的.scss文件，webpack在处理这类文件的时候都会依次```由后向前```去走 'postcss-loader',  'sass-loader', 'css-loader', 'style-loader'
-            - 2.但是问题来了，在sass文件中，@import其他 .scss 文件。当webpack处理文件由 'postcss-loader',  'sass-loader' 走到'css-loader', 的时候，遇到了 ```@import './avatar.scss';``` 它就不知道该如何解析scss文件了
+            - 2.但是问题来了，在sass文件中，@import其他 .scss 文件。当webpack处理文件由 'postcss-loader',  'sass-loader' 走到'css-loader', 的时候，遇到了 ```@import './avatar.scss';``` 它就不知道该如何解析这个@import进来的scss文件了，然后他就会直接把它按照css文件处理了，而不会解析里面scss语法
             - 所以，解决方案：给 ```css-loader``` 添加配置项 ```importLoaders``` 
             ```js
             // webpack.config.js
