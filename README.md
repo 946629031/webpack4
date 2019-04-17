@@ -296,3 +296,83 @@ webpack4 各种语法 入门讲解
                 }
             }
             ```
+
+- 3-4 使用 loader 打包静态资源（样式篇 - 下）
+    - 样式loader 配置项
+        - 现在有一个问题：先看下面项目文件
+            ```js
+            // index.js
+            import './index.scss'
+
+            // ...other js code
+            ```
+            ```scss
+            // index.scss
+            @import './avatar.scss';
+
+            body{
+                .avatar{ width: 150px }
+            }
+            ```
+            ```scss
+            // avatar.scss
+            .avatar{ color: red }
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: './src/index.js',
+                module: {
+                    rules: [{
+                        test: /\.scss$/,
+                        use: [
+                            'style-loader',
+                            'css-loader',
+                            'sass-loader',
+                            'postcss-loader'
+                        ]
+                    }]
+                },
+                output: {
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+        - 问题：
+            - 1.在入口文件index.js中，引入的.scss文件，webpack在处理这类文件的时候都会依次```由后向前```去走 'postcss-loader',  'sass-loader', 'css-loader', 'style-loader'
+            - 2.但是问题来了，在sass文件中，@import其他 .scss 文件。当webpack处理文件由 'postcss-loader',  'sass-loader' 走到'css-loader', 的时候，遇到了 ```@import './avatar.scss';``` 它就不知道该如何解析scss文件了
+            - 所以，解决方案：给 ```css-loader``` 添加配置项 ```importLoaders``` 
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: './src/index.js',
+                module: {
+                    rules: [{
+                        test: /\.scss$/,
+                        use: [
+                            'style-loader',
+                            {
+                                loader: 'css-loader',
+                                options: {
+                                    importLoaders: 2
+                                    // 在css文件中遇到 @import，会往前执行2个loader
+                                }
+                            },
+                            'sass-loader',
+                            'postcss-loader'
+                        ]
+                    }]
+                },
+                output: {
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
