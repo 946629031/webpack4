@@ -376,6 +376,183 @@ webpack4 各种语法 入门讲解
                 }
             }
             ```
-    - ### 2.样式模块化
+    - ### 2.样式的模块化 （样式的局部作用域）
         - 过去存在的问题：
-            - 11
+            - 在一个页面中引入 index.css
+            ```css
+                .avator{ width: 150px }
+            ```
+            这种情况下，对于整个页面来说 .avator 的 **样式的作用域是全局的** （对页面中所有的.avator class都有影响）。但是如果是多人开发，或组件式开发的项目，这样就很容易引起 **样式冲突** 的问题。
+
+            那么，有没有什么办法能实现 **样式的局部作用域** 呢？
+        - #### 样式的局部作用域
+            - **思路：** 
+                - ```modules: true```   开启css模块化
+                - ```let style = require('./css/index.scss')```     引入的scss赋值给变量 style
+                - ```img.classList.add(style.avator)```     添加class时用 style.avator
+            - 这样就能实现， index.scss 只对 其中指定的class有效 (**即使class同名**)
+        
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: './src/index.js',
+                module: {
+                    rules: [{
+                        test: /\.scss$/,
+                        use: [
+                            'style-loader',
+                            {
+                                loader: 'css-loader',
+                                options: {
+                                    importLoaders: 2,
+                                    modules: true   // 开启css模块化
+                                }
+                            },
+                            'sass-loader',
+                            'postcss-loader'
+                        ]
+                    }]
+                },
+                output: {
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+
+            ```js
+            // index.js
+            let img_src = require('./img/webpack.png')
+            let style = require('./css/index.scss')     // 引入的scss赋值给变量 style
+            let createAvator = require('./js/avator.js')
+            createAvator()
+
+            let dom = document.getElementById('dom')
+
+            let img = new Image()
+            img.src = `./dist/${img_src}`
+            img.classList.add(style.avator)     // 添加class时用 style.avator
+
+            dom.append(img)
+            ```
+
+            ```js
+            // ./js/avator.js
+            let img_src = require('../img/webpack.png')
+
+            function createAvator(){
+                let dom = document.getElementById('dom')
+
+                let img = new Image()
+                img.src = `./dist/${img_src}`
+                img.classList.add('avator')
+
+                dom.append(img)
+            }
+
+            module.exports = createAvator
+            ```
+    - ### 3.打包字体文件
+        - 思路：通过 ```file-loader``` 把字体文件打包到```dist```目录下
+        - 工程文件如下：
+        ```
+        项目目录
+        +  |- node_modules
+        +  |- /src
+        +     |- /css
+                 |- index.scss
+        +     |- /fonts
+                 |- iconfont.eot
+                 |- iconfont.svg
+                 |- iconfont.ttf
+                 |- iconfont.woff
+              |- index.js
+           |- index.html
+           |- package.json
+           |- postcss.config.js
+           |- webpack.config.js           
+        ```
+        ```js
+        // webpack.config.js
+        const path = require('path')
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'
+            },
+            module: {
+                rules: [{
+                    test: /\.scss$/,
+                    use: [
+                        'style-loader',
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                importLoaders: 2
+                            }
+                        },
+                        'sass-loader',
+                        'postcss-loader'
+                    ]
+                },{
+                    test: /\.(eot|svg|ttf|woff|woff2)$/,
+                    use: {
+                        loader: 'file-loader',
+                        // 此处用 'file-loader' 仅仅是利用file-loader能吧对应的文件移动到dist目录下的特性而已
+                        options: {
+                            outputPath: 'fonts/'
+                        }
+                    }
+                }]
+            },
+            output: {
+                filename: 'bundle.js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+        ```scss
+        // index.scss
+        @font-face {font-family: "iconfont";
+            src: url('../fonts/iconfont.eot?...')
+            src: url('../fonts/iconfont.eot?...')
+            url('../fonts/iconfont.woff?...')
+            url('../fonts/iconfont.ttf?...')
+            url('../fonts/iconfont.svg?...')
+        }
+        
+        .iconfont {
+            font-family: "iconfont" !important;
+            font-size: 16px;
+            font-style: normal;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .icon-edit-tools:before { content: "\e615"; }
+        
+        .icon-calendar:before { content: "\e613"; }
+        ```
+        ```js
+        // index.js
+        require('./css/index.scss')
+
+        let dom = document.getElementById('dom')
+
+        dom.innerHTML = `
+            <div class="iconfont icon-edit-tools"></div>
+            <div class="iconfont icon-calendar"></div>
+        `
+        ```
+        ```js
+        //postcss.config.js
+        module.exports = {
+            plugins: [
+                require('autoprefixer')
+            ]
+        }
+        ```
