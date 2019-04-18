@@ -556,3 +556,110 @@ webpack4 各种语法 入门讲解
             ]
         }
         ```
+
+- 3-5 使用 ```plugins``` 让打包更便捷
+    - ```plugins```的作用
+        - ```plugins```可以做webpack运行到某个时刻的时候，帮你做一些事情
+    - ### 1. ```HtmlWebpackPlugin```
+        - 之前存在的问题：在项目中，```index.html```文件总是我们手动创建并修改的，如果每次打包都需要这样的手动操作 就会显得很麻烦。那么，我们能不能通过webpack自动生成```index.html```文件呢？可以的！
+        - 1.```npm i -D html-webpack-plugin``` 安装插件
+        - 2.使用
+            ```js
+            // webpack.config.js
+            const HtmlWebpackPlugin = require('html-webpack-plugin')
+            const path = require('path')
+
+            module.exports = {
+                entry: 'index.js',
+                output: {
+                    path: path.resolve(__dirname, 'dist'),
+                    filename: 'bundle.js'
+                },
+                plugins: [new HtmlWebpackPlugin()]
+            }
+            ```
+            打包后，它会在```dist```目录下自动生成 ```index.html```
+            ```html
+            // dist/index.html
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>webpack App</title>
+            </head>
+            <body>
+                <script src="bundle.js"></script>
+            </body>
+            </html>
+            ```
+        - 3.**```HtmlWebpackPlugin``` 会在打包结束后，自动生成一个html文件，并把打包生成的js自动引入到这个html文件中**
+        - #### 4. ```HtmlWebpackPlugin``` 使用模板
+            ```js
+            // webpack.config.js
+            const HtmlWebpackPlugin = require('html-webpack-plugin')
+            const path = require('path')
+
+            module.exports = {
+                entry: 'index.js',
+                output: {
+                    path: path.resolve(__dirname, 'dist'),
+                    filename: 'bundle.js'
+                },
+                plugins: [new HtmlWebpackPlugin({
+                    template: 'src/index.html'
+                })]
+            }
+            ```
+            ```html
+            // src/index.html
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>html 模板</title>
+            </head>
+            <body>
+                <div id="root"></div>
+            </body>
+            </html>
+            ```
+            - 打包后会生成如下html
+            ```html
+            // dist/index.html
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>html 模板</title>
+            </head>
+            <body>
+                <div id="root"></div>
+                <script src="bundle.js"></script>
+            </body>
+            </html>
+            ```
+    - ### 2.```CleanWebpackPlugin```
+        - 先看存在的问题：
+            - 在开发过程中，假如我需要把打包输出的 ```bundle.js``` 改名为 ```dist.js```，但是我又不想要去手动删除打包输出的 ```dist``` 目录，那么有没有什么办法能帮我自动完成这个操作的呢？特别是在要删除的东西不是一个两个的时候（批量手动操作实在太麻烦了）。解决方法如下
+        - 1.安装 ```npm i -D clean-webpack-plugin```
+        - 2.使用
+            ```js
+            // webpack.config.js
+            const HtmlWebpackPlugin = require('html-webpack-plugin')
+            const CleanWebpackPlugin = require('clean-webpack-plugin')
+            const path = require('path')
+
+            module.exports = {
+                entry: 'index.js',
+                output: {
+                    path: path.resolve(__dirname, 'dist'),
+                    filename: 'bundle.js'
+                },
+                plugins: [
+                    new HtmlWebpackPlugin({
+                    template: 'src/index.html'
+                    }),
+                    new CleanWebpackPlugin(['dist']) // 在打包前，它会自动删除 dist 目录下的所有文件
+                ]
+            }
+            ```
