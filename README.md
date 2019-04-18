@@ -455,7 +455,7 @@ webpack4 各种语法 入门讲解
 
             module.exports = createAvator
             ```
-    - ### 3.打包字体文件
+    - #### 3.打包字体文件
         - 思路：通过 ```file-loader``` 把字体文件打包到```dist```目录下
         - 工程文件如下：
         ```
@@ -560,7 +560,7 @@ webpack4 各种语法 入门讲解
 - 3-5 使用 ```plugins``` 让打包更便捷
     - ```plugins```的作用
         - ```plugins```可以做webpack运行到某个时刻的时候，帮你做一些事情
-    - ### 1. ```HtmlWebpackPlugin```
+    - #### 1. ```HtmlWebpackPlugin```
         - 之前存在的问题：在项目中，```index.html```文件总是我们手动创建并修改的，如果每次打包都需要这样的手动操作 就会显得很麻烦。那么，我们能不能通过webpack自动生成```index.html```文件呢？可以的！
         - 1.```npm i -D html-webpack-plugin``` 安装插件
         - 2.使用
@@ -593,7 +593,7 @@ webpack4 各种语法 入门讲解
             </html>
             ```
         - 3.**```HtmlWebpackPlugin``` 会在打包结束后，自动生成一个html文件，并把打包生成的js自动引入到这个html文件中**
-        - #### 4. ```HtmlWebpackPlugin``` 使用模板
+        - ##### 4. ```HtmlWebpackPlugin``` 使用模板
             ```js
             // webpack.config.js
             const HtmlWebpackPlugin = require('html-webpack-plugin')
@@ -638,7 +638,7 @@ webpack4 各种语法 入门讲解
             </body>
             </html>
             ```
-    - ### 2.```CleanWebpackPlugin```
+    - #### 2.```CleanWebpackPlugin```
         - 先看存在的问题：
             - 在开发过程中，假如我需要把打包输出的 ```bundle.js``` 改名为 ```dist.js```，但是我又不想要去手动删除打包输出的 ```dist``` 目录，那么有没有什么办法能帮我自动完成这个操作的呢？特别是在要删除的东西不是一个两个的时候（批量手动操作实在太麻烦了）。解决方法如下
         - 1.安装 ```npm i -D clean-webpack-plugin```
@@ -663,3 +663,142 @@ webpack4 各种语法 入门讲解
                 ]
             }
             ```
+- ### 3-6 Entry 与 Output 的基础配置
+    - 1.输出命名
+        ```js
+        // webpack.config.js
+        const path = require('path')
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'  // 这里对象的键名，表示打包输出文件名为main.js
+            },
+            output: {
+                filename: 'bundle.js',  // 如果没定义输出文件名，默认为main.js
+                path： path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+    - 2.打包多个文件
+        ```js
+        // webpack.config.js
+        const path = require('path')
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'
+                sub: './src/sub.js'
+            },
+            output: {
+                filename: '[name].js',  // 这里支持 placeholder占位符 各种写法
+                path： path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+        输出结果：在 dist 目录下会生成 ```main.js``` 和 ```sbu.js```
+        #### 原理：output 中 ```filename: '[name].js'``` [name] 会自动根据 entry入口文件 的键名去生成对应的 ```main.js``` 和 ```sbu.js```
+    - 3.```publicPath```
+        - 问题：如果我们把 index.html 文件给到后端作为入口文件，而其他的静态资源我们上传到 cdn 上， 如```<script src="http://cdn.com.cn/main.js"></script>```，我们希望webpack能自动帮我们在 index.html 中插入的 js文件 自动插入cdn地址，我们该怎么办呢？
+        - 解决方法：
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                    sub: './src/sub.js'
+                },
+                output: {
+                    publicPath: 'http://cdn.com.cn',    // 在这里配置
+                    filename: '[name].js',
+                    path： path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            打包结果如下：
+            ```html
+            // dist/index.html
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+            </head>
+            <body>
+                <script src="http://cdn.com.cn/main.js"></script>
+                <script src="http://cdn.com.cn/sub.js"></script>
+            </body>
+            </html>
+            ```
+- ### 3-7 SourceMap 的配置
+    - 最佳配置：
+        - 开发环境
+            - 优点：提示错误比较全，打包速度比较快
+            ```js
+            // webpack.config.js
+            module.exports = {
+                mode: 'development',
+                devtool: 'cheap-module-eval-source-map'
+                ...
+            }
+            ```
+        - 生产环境
+            - 生成环境中，可以不用 ```devtool```，或者配置如下
+            ```js
+            // webpack.config.js
+            module.exports = {
+                mode: 'production',
+                devtool: 'cheap-module-source-map'
+                ...
+            }
+            ```
+    - 什么是 ```SourceMap``` ?
+        - 问题再现：
+            - 当你在开发过程中，```src/index.js``` 文件中的第1行 ```consele.log(hello world)``` 写错了，你却不知道的时候 执行了打包。
+            ```js
+            // webpack.config.js
+            module.exports = {
+                mode: 'development',
+                devtool: 'none'         // 关闭 SourceMap
+                ...
+            }
+            ```
+            如果在 ```SourceMap``` 没开启的情况下打包，且入口文件 ```src/index.js``` 内有错误，那么它在报错的时候，就会说
+             - 在 ```dist/bundle.js``` 文件中第96行发现错误。
+             - 但是问题来了，我并不希望你告诉我 ```dist/bundle.js``` 哪里错了，而是希望你能告诉我源码中哪里错了，如 ```src/index.js``` 文件中的第1行 ```consele.log(hello world)``` 写错了。那我们该怎么办呢？
+        - #### SourceMap 定义
+            - ```SourceMap``` 它是一个映射关系，当它知道在 ```dist/bundle.js``` 文件中第96行发现错误，实际上就对应着 如 ```src/index.js``` 入口文件中的第1行 ```consele.log(hello world)``` 发现错误。
+            - 一言以蔽之，```SourceMap``` 就是把输出后的js，与源码做映射。
+        - #### SourceMap 用法
+            - 1.开启 SourceMap
+                ```js
+                // webpack.config.js
+                module.exports = {
+                    mode: 'development',
+                    devtool: 'source-map'   // 开启 SourceMap
+                    ...
+                }
+                ```
+            - 2.查找源码错误
+                - 开启 ```SourceMap``` 后，重新打包，如果浏览器 ```console面板``` 提示错误，点击错误提示就会 **直接跳转到错误的源文件处了**。
+        - 文档解析：
+            - [文档地址](https://webpack.js.org/configuration/devtool#devtool)
+            - ```inline-source-map```
+                - 在 webpack.config.js 中 ```devtool: 'xxx'``` 的所有配置参数中，凡是没带 ```inline-``` 开头的，都会在 ```dist``` 目录下生成 ```bundle.js.map``` 映射文件
+                - 而凡是带了 ```inline-``` 开头的，```.map``` 映射文件的内容都会被 以```base64```方式 写入输出的 ```bundle.js``` 文件中
+            - ```cheap-source-map```
+                - 这是 "cheap(低开销)" 的 SourceMap ,因为它没有生成列映射，只是映射行数。
+                - 默认情况下，不带 ```cheap-``` 的 SourceMap 默认既映射行数，也映射列数，但是打包过程比较久，比较耗费性能。
+            - ```cheap-module-source-map```
+                - 存在的问题：
+                    - 而且 ```cheap-``` 只映射 **业务代码** (即entry的入口文件) 的映射关系，不会去管其它的模块错误。
+                - 当 ```devtool: 'cheap-module-source-map'``` 时，这时候的映射关系不仅映射 **业务代码** ，还映射业务代码引入的其他 文件或模块 ，或第三方 module 的错误。
+            - ```eval```
+                - 当 ```devtool: 'eval'``` 时
+                    - ```eval``` 是打包速度最快的一种方式，也能映射报错位置。
+                    - ```eval``` 既不生成 ```bundle.js.map``` 映射文件，也不会像 ```inline-source-map``` 中以 ```base64``` 方式吧 ```映射关系``` 写入在 ```bundle.js``` 内。
+                    - 但是，```eval``` 以 ```eval("...")... sourceURL=...``` 方式把 ```映射关系``` 写入 ```bundle.js``` 中
+                    - **缺点**：对于比较复杂的项目，```eval``` 这种打包方式的 **提示可能并不全面**
