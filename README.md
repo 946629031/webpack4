@@ -734,7 +734,7 @@ webpack4 各种语法 入门讲解
             </html>
             ```
 - ### 3-7 SourceMap 的配置
-    - 最佳配置：
+    - #### 最佳配置：
         - 开发环境
             - 优点：提示错误比较全，打包速度比较快
             ```js
@@ -802,3 +802,130 @@ webpack4 各种语法 入门讲解
                     - ```eval``` 既不生成 ```bundle.js.map``` 映射文件，也不会像 ```inline-source-map``` 中以 ```base64``` 方式吧 ```映射关系``` 写入在 ```bundle.js``` 内。
                     - 但是，```eval``` 以 ```eval("...")... sourceURL=...``` 方式把 ```映射关系``` 写入 ```bundle.js``` 中
                     - **缺点**：对于比较复杂的项目，```eval``` 这种打包方式的 **提示可能并不全面**
+- ### 3-8 使用 ```WebpackDevServer``` 提升开发效率
+    - ```wabpack --watch```
+        - 1.配置 ```package.json```
+            ```js
+            // package.json
+            {
+                ...
+                "scripts": {
+                    "watch" : "webpack --watch",
+                    // "bundle": "webpack"
+                }
+                ...
+            }
+            ```
+        - 2.```npm run watch``` 执行该脚本
+        - 3.这时候，当你改动项目中 ```src``` 下的任何文件，webpack 监听到变动，就会自动重新打包。
+    - 存在问题：
+        - ```wabpack --watch``` 这种方式还不足够方便
+        - 如果我希望能，在我第一次执行 ```npm run watch``` 的时候，
+            - 1.自动帮我打包，
+            - 2.自动帮我把浏览器打开， 
+            - 3.同时还可以帮我模拟一些服务器上的特性
+    - #### ```WebpackDevServer```
+        - 优点：
+            - 监听入口文件，自动打包
+            - 开启本地服务器
+            - 自动刷新页面，不需要手动刷新
+            - 由于是本地服务器(http://协议)，所以可以发送 ajax 请求。本地文件打开则不行(file://协议)
+        - 1.安装 ```npm i -D webpack-dev-server```
+        - 2.配置
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                devtool: 'cheap-module-eval-source-map',
+                entry: './src/index.js',
+                devServer: {
+                    contentBase: './dist',   // 借助devServer起一个服务器，根路径为'./dist'
+                    open: true      // 自动打开浏览器，并访问 http://localhost:8080
+                },
+                output: {
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            ```js
+            // package.json
+            {
+                ...
+                "scripts": {
+                    "watch" : "webpack --watch",
+                    "start" : "webpack-dev-server",
+                    // "bundle": "webpack"
+                }
+                ...
+            }
+            ```
+        - 3.执行脚本 ```npm run start```
+            - 这时候 ```webpack-dev-server``` 就开启了本地服务器 ```http://localhost:8080```
+            - 而且监听入口文件，自动打包
+    - 手动写一个 ```webpackDevServer``` （了解即可）
+        - 配置
+            ```js
+            // server.js
+            const express = require('express')
+            const webpack = require('webpack')
+            const webpackDevMiddleware = require('webpack-dev-middleware')
+            const config = require('./webpack.config.js')
+            const complier = webpack(config)
+
+            const app = express()
+
+            app.use(webpackDevMiddleware(complier, {
+                publicPath: config.output.publicPath
+            }))
+
+            app.listen(3000, () => {
+                console.log('server is running')
+            })
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                devtool: 'cheap-module-eval-source-map',
+                entry: './src/index.js',
+                devServer: {
+                    contentBase: './dist',   // 借助devServer起一个服务器，根路径为'./dist'
+                    open: true      // 自动打开浏览器，并访问 http://localhost:8080
+                },
+                output: {
+                    publicPath: '/',
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            ```js
+            // package.json
+            {
+                ...
+                "scripts": {
+                    // "bundle": "webpack"
+                    "watch" : "webpack --watch",
+                    "start" : "webpack-dev-server",
+                    "server": "node server.js"
+                }
+                ...
+            }
+            ```
+            ```
+            // 项目目录
+            +  |- /node_modules
+            +  |- /src
+               |- package.json
+               |- server.js
+               |- webpack.config.js
+            ```
+        - 开启服务
+            - ```npm run server```
+            - 而且监听入口文件，自动打包
+            - 开启服务后，访问 ```http://localhost:3000``` 预览项目
