@@ -929,3 +929,118 @@ webpack4 各种语法 入门讲解
             - ```npm run server```
             - 而且监听入口文件，自动打包
             - 开启服务后，访问 ```http://localhost:3000``` 预览项目
+
+- ### 3-9 ```Hot Module Replacement``` 模块热更新
+    - 1.css热更新
+        - 以前存在的问题：
+            - 之前执行 ```webpack-dev-server``` 的时候，自动监听 src目录，当监听到文件修改的时候，就会自动打包并刷新页面。
+            - 但是有时候我们会觉得挺麻烦的，例如：给button绑定事件，每点击一次，新增一个div，当我们修改该div的css，浏览器就会自动刷新了，导致每修改一次css，都需要重新点击button，听麻烦的...
+            - 那么如何才能只修改css，不重载 document 呢？用下面的 ```Hot Module Replacement``` 模块热更新
+        - 配置
+            1. ```devServer``` 开启 hot 和 hotOnly
+            2. ```const webpack = require('webpack')```
+            3. ```plugins:[ new webpack.HotModuleReplacementPlugin() ]```
+            ```js
+            // webpack.config.js
+            const path = require('path')
+            const webpack = require('webpack')
+
+            module.exports = {
+                mode: 'development',
+                devtool: 'cheap-module-eval-source-map',
+                entry: './src/index.js',
+                devServer: {
+                    contentBase: './dist',
+                    open: true,
+                    hot: true,     // 开启 Hot Module Replacement
+                    hotOnly: true  // 构建失败时不刷新页面
+                },
+                plugins:[
+                    new webpack.HotModuleReplacementPlugin()
+                ]
+                output: {
+                    publicPath: '/',
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+    - 2.js模块的热更新
+        - 核心关键：
+            ```js
+            if(module.hot){
+                // 如果文件发生变化，就执行后面的函数
+                module.hot.accept('./number', ()=>{
+                    // ...执行内容
+                })
+            }
+            ```
+        - 配置案例：
+            - 需求：修改 ```number.js模块``` 中的1000，不影响 ```// counter.js模块``` 中已经执行的结果
+            ```js
+            // number.js 模块
+            function number(){
+                let div = document.createElement('div');
+                div.setAttribute('id','number')
+                div.innerHTML = 1000
+                document.body.appendChild(div)
+            }
+            module.exports = number
+            ```
+            
+            ```js
+            // counter.js 模块
+            function counter(){
+                let div = document.createElement('div');
+                div.setAttribute('id','counter')
+                div.innerHTML = 1
+                div.onclick = function(){
+                    div.innerHTML = parseInt(div.innerHTML, 10) + 1 // 每次点击+1
+                }
+                document.body.appendChild(div)
+            }
+            module.exports = counter
+            ```
+            ```js
+            // index.js
+            import counter from './counter';
+            import number from './number';
+
+            counter();
+            number();
+
+
+            if(module.hot){
+                // 如果文件发生变化，就执行后面的函数
+                module.hot.accept('./number', ()=>{
+                    document.body.removeChild(document.getElementById('number'))
+                    number();
+                })
+            }
+            ```
+            
+            ```js
+            // webpack.config.js
+            const path = require('path')
+            const webpack = require('webpack')
+
+            module.exports = {
+                mode: 'development',
+                devtool: 'cheap-module-eval-source-map',
+                entry: './src/index.js',
+                devServer: {
+                    contentBase: './dist',
+                    open: true,
+                    hot: true,     // 开启 Hot Module Replacement
+                    hotOnly: true  // 构建失败时不刷新页面
+                },
+                plugins:[
+                    new webpack.HotModuleReplacementPlugin()
+                ]
+                output: {
+                    publicPath: '/',
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
