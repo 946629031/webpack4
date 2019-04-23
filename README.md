@@ -1044,3 +1044,256 @@ webpack4 各种语法 入门讲解
                 }
             }
             ```
+
+- ### 3-11 使用 ```Babel``` 处理 ES6 语法
+    - [Babel 官网](https://babeljs.io/setup#installation)
+    - 1.安装 ```npm install --save-dev babel-loader @babel/core```
+    - 2.配置
+        ```js
+        // webpack.config.js
+        module:{
+            rules:[
+                test: /\.js$/, 
+                exclude: /node_modules/,  // 排除 node_modules 目录的文件
+                loader: "babel-loader",
+                options: {
+                    presets: ["@babel/preset-env"]
+                }
+            ]
+        }
+        ```
+    - 3.```npm i @babel/preset-env -D```
+        - 为什么还要安装 @babel/preset-env 呢？实际上 babel-loader 只是 webpack和babel 的通信桥梁，而 ```@babel/preset-env``` 才能 ES6 转成 ES5
+    - 4.在 ```webpack.config.js```中 module.rules 增加 ```options: { presets: ["@babel/preset-env"] }```
+    - 5.```polyfill```
+        - 在走完前面4步之后，还是有一些 对象 或 函数，在低版本的浏览器是没有的，所以这时候 **就要把这些缺失的函数补充进来**，这时候就要用到 ```polyfill``` 了
+        - 安装 ```npm i @babel/polyfill -D```
+        - 使用：
+            - 在业务代码 ```index.js``` 的最顶部引入 ```polyfill```
+                ```js
+                // index.js
+                import "@babel/polyfill"
+
+                const arr = [
+                    new Promise(() => {}),
+                    new Promise(() => {})
+                ]
+
+                arr.map(item => {
+                    console.log(item)
+                })
+                ```
+        - 存在的问题：
+            - ```polyfill``` 配置完上面的步骤后，如果直接打包，会发现他把低版本浏览器缺失的函数和对象全都加载进来了，导致输出文件非常大。
+            - 问题的解决如下：给 ```presets``` 添加选项 ```useBuiltIns: 'usage'```
+    - #### 6.业务代码 最佳配置
+        ```js
+        // webpack.config.js
+
+        const path = require('path')
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'
+            },
+            module: {
+                rules: [{
+                test: /\.js$/, 
+                exclude: /node_modules/,  // 排除 node_modules 目录的文件
+                loader: "babel-loader",
+                options: {
+                    presets: [[
+                        "@babel/preset-env", {
+                        targets: {
+                            edge: "17",
+                            firefox: "60",
+                            chrome: "67",
+                            safari: "11.1",
+                        },
+                        useBuiltIns: 'usage'    // 添加选项，只添加 index.js 用到对象或函数
+                    }]]
+                }}]
+            },
+            output: {
+                filename: 'bundle.js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+    - #### 7.其他场景：开发类库、第三方模块、组件库
+        - 1.存在的问题
+            - 通过 ```import "@babel/polyfill"``` 这种方案实际是有问题的，因为 它在补充注入缺失的对象或者函数的时候，**是通过全局变量的形式，会污染到全局环境**。 解决方法如下
+        - 2.安装
+            - ```npm i -D @babel/plugin-transform-runtime```
+            - ```npm i -D @babel/runtime```
+            - ```npm install --save @babel/runtime-corejs2```
+        - 配置
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                },
+                module: {
+                    rules: [{
+                    test: /\.js$/, 
+                    exclude: /node_modules/,
+                    loader: "babel-loader",
+                    options: {
+                        "plugins": [["@babel/plugin-transform-runtime", {
+                            "corejs": 2,    // 默认为false, 值为2时，要多安装一个 @babel/runtime-corejs2 包
+                            "helpers": true,
+                            "regenerator": true,
+                            "useESModules": false
+                        }]]
+                    }}]
+                },
+                output: {
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            - 业务代码 ```index.js``` 中不需要引入 ```import "@babel/polyfill"```
+                ```js
+                // index.js
+                const arr = [
+                    new Promise(() => {}),
+                    new Promise(() => {})
+                ]
+
+                arr.map(item => {
+                    console.log(item)
+                })
+                ```
+    - ```.babelrc``` babel配置文件
+        - 1.存在的问题：由于 babel 的配置参数非常多，如果全都写在 ```webpack.config.js``` 则会非常长。所以可以把 ```babel-loader``` 中的 ```options``` 对象单独拿出来，写在 ```.babelrc``` 文件中，并放在 ```webpack.config.js``` 同级目录下。
+        - 2.配置
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                },
+                module: {
+                    rules: [{
+                    test: /\.js$/, 
+                    exclude: /node_modules/,
+                    loader: "babel-loader"
+                    }]
+                },
+                output: {
+                    filename: 'bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            ```js
+            // .babelrc
+            {
+                "plugins": [["@babel/plugin-transform-runtime", {
+                    "corejs": 2,
+                    "helpers": true,
+                    "regenerator": true,
+                    "useESModules": false
+                }]]
+            }
+            ```
+            注意：```.babelrc``` 文件中不能写注释
+- 3-13 Webpack 实现对React框架代码的打包
+    - ... 暂不记录，请查阅视频讲解
+- ### 本章总结 最佳配置
+    ```js
+    // webpack.config.js
+    const path = require('path')
+    const HTMLWebpackPlugin = require('html-webpack-plugin')
+    const CleanWebpackPlugin =require('clean-webpack-plugin')
+    const webpack = require('webpack')
+
+    module.exports = {
+        mode: 'development',
+        devtool: 'cheap-module-eval-source-map',
+        entry:{
+            main: './src/index.js'
+        },
+        devServer: {
+            contentBase: './dist',
+            open: true,
+            port: 8080,
+            hot: true,
+            hotOnly: true
+        },
+        module: {
+            rules: [{
+                test: /\.js$/,
+                exclude: /node_modules/,
+                loader: 'babel-loader',
+                options: {
+                    presets: [[
+                        "@babel/preset-env", {
+                        targets: {
+                            edge: "17",
+                            firefox: "60",
+                            chrome: "67",
+                            safari: "11.1",
+                        },
+                        useBuiltIns: 'usage'    // 只添加用到对象或函数
+                    }]]
+                }
+            },{
+                test: /\.(jpg|png|gif)$/,
+                use: {
+                    loader: 'url-loader',
+                    options: {
+                        name: '[name].[hash].[ext]',
+                        outputPath: 'images/',
+                        limit: 10240
+                    }
+                }
+            },{
+                test: /\.(eot|ttf|svg)$/,
+                use: {
+                    loader: 'file-loader'
+                }
+            },{
+                test: /\.scss$/,
+                use: [
+                    'style-loader',
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            importLoaders: 2
+                        }
+                    },
+                    'sass-loader',
+                    'postcss-loader'
+                ]
+            },{
+                test: /\.css$/,
+                use: [
+                    'style-loader',
+                    'css-loader',
+                    'postcss-loader'
+                ]
+            }]
+        },
+        plugins: [
+            new HtmlWebpackPlugin({
+                template: 'src/index.html'
+            }),
+            new CleanWebpackPlugin(['dist']),
+            new webpack.HotModuleReplacementPlugin()
+        ],
+        output: {
+            filename: '[name].js',  // [name] 值根据 entry 的 key 值决定的
+            path: path.resolve(__dirname, 'dist')
+        }
+    }
+    ```
