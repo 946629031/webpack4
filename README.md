@@ -20,9 +20,9 @@ webpack4 各种语法 入门讲解
     - [3-5 使用 ```plugins``` 让打包更便捷【```HtmlWebpackPlugin```、```CleanWebpackPlugin```】](#3-5-使用-plugins-让打包更便捷)
     - [3-6 Entry 与 Output 的基础配置](#3-6-Entry-与-Output-的基础配置)
     - [3-7 SourceMap 的配置](#3-7-SourceMap-的配置)
-    - [3-8 使用 ```WebpackDevServer``` 提升开发效率](#3-8-使用-```WebpackDevServer```-提升开发效率)
-    - [3-9 ```Hot Module Replacement``` 模块热更新](#3-9-```Hot-Module-Replacement```-模块热更新)
-    - [3-11 使用 ```Babel``` 处理 ES6 语法](#3-11-使用-```Babel```-处理-ES6-语法)
+    - [3-8 使用 ```WebpackDevServer``` 提升开发效率](#3-8-使用-WebpackDevServer-提升开发效率)
+    - [3-9 ```Hot Module Replacement``` 模块热更新](#3-9-Hot-Module-Replacement-模块热更新)
+    - [3-11 使用 ```Babel``` 处理 ES6 语法](#3-11-使用-Babel-处理-ES6-语法)
     - [3-13 Webpack 实现对React框架代码的打包](#3-13-Webpack-实现对React框架代码的打包)
     - [本章总结 最佳配置](#第3章-Webpack-的核心概念总结-最佳配置)
 - [第4章](#)
@@ -950,7 +950,7 @@ webpack4 各种语法 入门讲解
             - 而且监听入口文件，自动打包
             - 开启服务后，访问 ```http://localhost:3000``` 预览项目
 
-- ### 3-9 ```Hot Module Replacement``` 模块热更新
+- ### 3-9 Hot Module Replacement 模块热更新
     - 1.css热更新
         - 以前存在的问题：
             - 之前执行 ```webpack-dev-server``` 的时候，自动监听 src目录，当监听到文件修改的时候，就会自动打包并刷新页面。
@@ -1065,7 +1065,7 @@ webpack4 各种语法 入门讲解
             }
             ```
 
-- ### 3-11 使用 ```Babel``` 处理 ES6 语法
+- ### 3-11 使用 Babel 处理 ES6 语法
     - [Babel 官网](https://babeljs.io/setup#installation)
     - 1.安装 ```npm install --save-dev babel-loader @babel/core```
     - 2.配置
