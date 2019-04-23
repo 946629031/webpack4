@@ -9,8 +9,8 @@ webpack4 各种语法 入门讲解
 ----
 
 **目录**
-- [第1章 为什么会出现webpack?](#第1章-为什么会出现webpack?)
-- [第2章 webpack究竟是什么？](#第2章-webpack究竟是什么？)
+- [第1章 为什么会出现webpack?](#第1章-为什么会出现webpack)
+- [第2章 webpack究竟是什么？](#第2章-webpack究竟是什么)
     - [2-3 Webpack 的正确安装方式](#2-3-Webpack-的正确安装方式)
 - [第3章 Webpack 的核心概念](#第3章-Webpack-的核心概念)
     - [3-1 什么是loader](#3-1-什么是loader)
@@ -40,7 +40,7 @@ webpack4 各种语法 入门讲解
         - ```npx webpack index.js```  (局部安装)
         - ```webpack input.js output.js``` (全局安装)
     
-- 2-3 Webpack 的正确安装方式
+- ### 2-3 Webpack 的正确安装方式
     - 环境依赖 node.js , npm
     - 项目初始化：```npm init -y```
         - 要想用webpack管理项目，要先让项目符合node的规范
@@ -107,7 +107,7 @@ webpack4 各种语法 入门讲解
         - ```npx webpack --config config_file_name.js```
 
 ## 第3章 Webpack 的核心概念
-- 3-1 什么是loader
+- ### 3-1 什么是loader
     - 什么是 loader ?
         - 由于webpack原来只能打包js文件，但是如果要打包css或jpg/png的文件时，webpack就会不支持了。这时候就要借助loader来解决这个问题。
     - loader三步曲
@@ -137,7 +137,7 @@ webpack4 各种语法 入门讲解
             }
         }
         ```
-- 3-2 使用 Loader 打包静态资源(图片篇)
+- ### 3-2 使用 Loader 打包静态资源(图片篇)
     - file-loader
         ```js
         const path = require('path')
@@ -203,7 +203,7 @@ webpack4 各种语法 入门讲解
             }
         }
         ```
-- 3-3 使用 loader 打包静态资源(样式篇 - 上)
+- ### 3-3 使用 loader 打包静态资源(样式篇 - 上)
     - 1.处理css文件
         - ```npm i style-loader css-loader -D``` 安装css-loader
         - webpack.config.js
