@@ -16,7 +16,7 @@ webpack4 各种语法 入门讲解
     - [3-1 什么是loader](#3-1-什么是loader)
     - [3-2 使用 Loader 打包静态资源（图片篇）](#3-2-使用-Loader-打包静态资源（图片篇）)
     - [3-3 使用 loader 打包静态资源（样式篇 - 上）【css、scss、私有前缀】](#3-3-使用-loader-打包静态资源（样式篇---上）)
-    - [3-4 使用 loader 打包静态资源（样式篇 - 下）【样式中是sass、样式的局部作用域、字体文件】](#3-4-使用-loader-打包静态资源（样式篇---下）)
+    - [3-4 使用 loader 打包静态资源（样式篇 - 下）【样式中是sass、样式的局部作用域、字体文件】](#3-4-使用-loader-打包静态资源(样式篇---下)
     - [3-5 使用 ```plugins``` 让打包更便捷【```HtmlWebpackPlugin```、```CleanWebpackPlugin```】](#3-5-使用-plugins-让打包更便捷)
     - [3-6 Entry 与 Output 的基础配置](#3-6-Entry-与-Output-的基础配置)
     - [3-7 SourceMap 的配置](#3-7-SourceMap-的配置)
@@ -317,7 +317,7 @@ webpack4 各种语法 入门讲解
             }
             ```
 
-- 3-4 使用 loader 打包静态资源（样式篇 - 下）
+- 3-4 使用 loader 打包静态资源(样式篇 - 下)
     - ### 1.样式loader 配置项
         - 现在有一个问题：先看下面项目文件
             ```js
@@ -950,7 +950,7 @@ webpack4 各种语法 入门讲解
             - 而且监听入口文件，自动打包
             - 开启服务后，访问 ```http://localhost:3000``` 预览项目
 
-- ### 3-9 Hot Module Replacement 模块热更新
+- ### 3-9 ```Hot Module Replacement``` 模块热更新
     - 1.css热更新
         - 以前存在的问题：
             - 之前执行 ```webpack-dev-server``` 的时候，自动监听 src目录，当监听到文件修改的时候，就会自动打包并刷新页面。
@@ -1065,7 +1065,7 @@ webpack4 各种语法 入门讲解
             }
             ```
 
-- ### 3-11 使用 Babel 处理 ES6 语法
+- ### 3-11 使用 ```Babel``` 处理 ES6 语法
     - [Babel 官网](https://babeljs.io/setup#installation)
     - 1.安装 ```npm install --save-dev babel-loader @babel/core```
     - 2.配置
