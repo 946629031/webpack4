@@ -17,7 +17,7 @@ webpack4 各种语法 入门讲解
     - [3-2 使用 Loader 打包静态资源（图片篇）](#3-2-使用-Loader-打包静态资源（图片篇）)
     - [3-3 使用 loader 打包静态资源（样式篇 - 上）【css、scss、私有前缀】](#3-3-使用-loader-打包静态资源（样式篇---上）)
     - [3-4 使用 loader 打包静态资源（样式篇 - 下）【样式中是sass、样式的局部作用域、字体文件】](#3-4-使用-loader-打包静态资源（样式篇---下）)
-    - [3-5 使用 ```plugins``` 让打包更便捷【```HtmlWebpackPlugin```、```CleanWebpackPlugin```】](#3-5-使用-```plugins```-让打包更便捷)
+    - [3-5 使用 ```plugins``` 让打包更便捷【```HtmlWebpackPlugin```、```CleanWebpackPlugin```】](#3-5-使用-plugins-让打包更便捷)
     - [3-6 Entry 与 Output 的基础配置](#3-6-Entry-与-Output-的基础配置)
     - [3-7 SourceMap 的配置](#3-7-SourceMap-的配置)
     - [3-8 使用 ```WebpackDevServer``` 提升开发效率](#3-8-使用-```WebpackDevServer```-提升开发效率)
@@ -577,7 +577,7 @@ webpack4 各种语法 入门讲解
         }
         ```
 
-- ### 3-5 使用 ```plugins``` 让打包更便捷
+- ### 3-5 使用 plugins 让打包更便捷
     - ```plugins```的作用
         - ```plugins```可以做webpack运行到某个时刻的时候，帮你做一些事情
     - #### 1. ```HtmlWebpackPlugin```
