@@ -24,7 +24,7 @@ webpack4 各种语法 入门讲解
     - [3-9 ```Hot Module Replacement``` 模块热更新](#3-9-```Hot-Module-Replacement```-模块热更新)
     - [3-11 使用 ```Babel``` 处理 ES6 语法](#3-11-使用-```Babel```-处理-ES6-语法)
     - [3-13 Webpack 实现对React框架代码的打包](#3-13-Webpack-实现对React框架代码的打包)
-    - [第3章 Webpack 的核心概念总结 最佳配置](#第3章-Webpack-的核心概念总结-最佳配置)
+    - [本章总结 最佳配置](#第3章-Webpack-的核心概念总结-最佳配置)
 - [第4章](#)
 ----
 
@@ -577,7 +577,7 @@ webpack4 各种语法 入门讲解
         }
         ```
 
-- 3-5 使用 ```plugins``` 让打包更便捷
+- ### 3-5 使用 ```plugins``` 让打包更便捷
     - ```plugins```的作用
         - ```plugins```可以做webpack运行到某个时刻的时候，帮你做一些事情
     - #### 1. ```HtmlWebpackPlugin```
