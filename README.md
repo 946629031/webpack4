@@ -137,7 +137,7 @@ webpack4 各种语法 入门讲解
             }
         }
         ```
-- 3-2 使用 Loader 打包静态资源（图片篇）
+- 3-2 使用 Loader 打包静态资源(图片篇)
     - file-loader
         ```js
         const path = require('path')
@@ -203,7 +203,7 @@ webpack4 各种语法 入门讲解
             }
         }
         ```
-- 3-3 使用 loader 打包静态资源（样式篇 - 上）
+- 3-3 使用 loader 打包静态资源(样式篇 - 上)
     - 1.处理css文件
         - ```npm i style-loader css-loader -D``` 安装css-loader
         - webpack.config.js
