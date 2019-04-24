@@ -25,7 +25,10 @@ webpack4 各种语法 入门讲解
     - [3-11 使用 ```Babel``` 处理 ES6 语法](#3-11-使用-Babel-处理-ES6-语法)
     - [3-13 Webpack 实现对React框架代码的打包](#3-13-Webpack-实现对React框架代码的打包)
     - [本章总结 最佳配置](#第3章-Webpack-的核心概念总结-最佳配置)
-- [第4章](#)
+- [第4章 Webpack 的高级概念](##第4章-webpack-的高级概念)
+    - [4-1 Tree Shaking 概念详解](#4-1-tree-shaking-概念详解)
+- [第5章](#)
+
 ----
 
 ## 第1章 为什么会出现webpack?
