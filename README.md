@@ -1355,7 +1355,7 @@ webpack4 各种语法 入门讲解
                     }
                 }
                 ```
-        - 3.```sideEffects```
+        - 3.```sideEffects``` 排除掉那些没有导出的模块
             ```js
             // package.json
             {
