@@ -1106,7 +1106,7 @@ webpack4 各种语法 入门讲解
         - 存在的问题：
             - ```polyfill``` 配置完上面的步骤后，如果直接打包，会发现他把低版本浏览器缺失的函数和对象全都加载进来了，导致输出文件非常大。
             - 问题的解决如下：给 ```presets``` 添加选项 ```useBuiltIns: 'usage'```
-    - #### 6.业务代码 最佳配置
+    - #### 6.业务代码 babel最佳配置
         ```js
         // webpack.config.js
 
@@ -1131,7 +1131,8 @@ webpack4 各种语法 入门讲解
                             chrome: "67",
                             safari: "11.1",
                         },
-                        useBuiltIns: 'usage'    // 添加选项，只添加 index.js 用到对象或函数
+                        useBuiltIns: 'usage'    // 只添加 index.js 用到对象或函数
+                        // 当设置了 useBuiltIns: 'usage' 之后，业务代码就不必再次 import "@babel/polyfill"，因为它会自动引入
                     }]]
                 }}]
             },
@@ -1233,8 +1234,8 @@ webpack4 各种语法 入门讲解
     ```js
     // webpack.config.js
     const path = require('path')
-    const HTMLWebpackPlugin = require('html-webpack-plugin')
-    const CleanWebpackPlugin =require('clean-webpack-plugin')
+    const HtmlWebpackPlugin = require('html-webpack-plugin')
+    const CleanWebpackPlugin = require('clean-webpack-plugin')
     const webpack = require('webpack')
 
     module.exports = {
@@ -1308,7 +1309,7 @@ webpack4 各种语法 入门讲解
             new HtmlWebpackPlugin({
                 template: 'src/index.html'
             }),
-            new CleanWebpackPlugin(['dist']),
+            new CleanWebpackPlugin(),
             new webpack.HotModuleReplacementPlugin()
         ],
         output: {
@@ -1317,3 +1318,167 @@ webpack4 各种语法 入门讲解
         }
     }
     ```
+## 第4章 Webpack 的高级概念
+- ### 4-1 Tree Shaking 概念详解
+    - 1.什么是 ```Tree Shaking``` ?
+        - 中文译名：摇树       （好像翻译有点生硬(　＾∀＾)）
+        - ```Tree Shaking``` 是干嘛的？
+            - 简单的说，就是把需要的留下，不需要的甩掉
+            - 举个例子：
+                - 现在有一个 math 函数库，但是在我的业务代码中只使用了 add、minus 两个函数 ( 实现思路：先 import "math 函数库" 进来，然后调用 add、minus 两个函数 )。
+                - 在打包的时候，你会发现，虽然我们只使用的 add、minus 两个函数，但是 webpack 会把你 import 进来 **整个函数库都一并打包进来了**，这并不是我想要的，因为这会导致代码量剧增，而且这些没用到的都是没用的代码。
+                - ```Tree Shaking``` 是干嘛的？ 答：就是帮助你，**把需要的留下，不需要的甩掉**
+    - 2.```Tree Shaking``` 的特点
+        - 1.```Tree Shaking``` 只支持 ES Module 的引入方式
+            - 只支持 √ ```import { add } from './math.js'```    ，底层是静态引入
+            - 不支持 × ```const add = require('./math.js') ```  ，底层是动态引入
+        - 2.配置 ```Tree Shaking``` 
+            - 1.在```development``` 环境模式下要使用```Tree Shaking```，需要开启```optimization: { usedExports: true }```
+                ```js
+                // webpack.config.js
+                const path = require('path')
+
+                module.exports = {
+                    mode: 'development', // development 模式默认是没有 Tree Shaking 功能的，所以要在 optimization.usedExports 开启
+                    entry:{ main: './src/index.js' },
+                    module: {...},
+                    plugins: [...],
+                    optimization: {
+                        usedExports: true   // 只导出，被使用的部分
+                    }
+                    output: {
+                        filename: '[name].js',
+                        path: path.resolve(__dirname, 'dist')
+                    }
+                }
+                ```
+        - 3.```sideEffects```
+            ```js
+            // package.json
+            {
+                "sideEffects": false    // 默认为 false
+            }
+            ```
+            - 1.只要你配置了 ```Tree Shaking``` ，那么 webpack 只要打包一个模块，就会应用 ```Tree Shaking``` 的方式
+            - 2.存在的问题
+                - 假如你引入了一个 ```import @babel/polyfill```
+                - 而， ```import @babel/polyfill``` 实际上并没有导出任何的内容，而是给全局变量直接绑定一些对象或函数，如```window.Promise```
+                - 这时候，如果你使用了 ```import @babel/polyfill```，那么 ```Tree Shaking``` 就会检测到，你并没有导出任何的内容，于是 ```Tree Shaking``` 就会直接把 ```@babel/polyfill``` 给忽略掉了
+                - 但是，这并不是我们想要的。我们希望保留 ```@babel/polyfill``` ，那么怎么办呢？看下面解决方法
+            - 3.解决方法
+                - 当中业务代码中用到那些，没有导出 ( ```mudule.exports = {...}``` ) 的模块时，就需要在 ```package.json``` 中 ```sideEffects``` 排除掉那些文件模块
+                ```js
+                // index.js
+                import "./src/style.css"
+                import "./src/index.scss"
+                import "@babel/polyfill"
+                ```
+                ```js
+                // package.json
+                {
+                    "sideEffects": [
+                        "@babel/polyfill",
+                        "*.css",
+                        "*.scss"
+                    ]
+                }
+                ```
+                这样配置完后，Tree Shaking 就会跳过 @babel/polyfill、css文件、scss文件 了
+        - 4.在 webpack development 环境下，即使使用了 ```Tree Shaking``` , 在打包的时候 **不会直接把那些你没用到的代码直接丢掉**，仍然存在于 出口文件 bundle.js 中，但是会在其中提示 ```exports provided:...```提供的函数， ```exports used:...``` 用到的函数
+        - 5.在生产环境 ```production``` 中,就会完全丢掉那些没用到的代码了
+            ```js
+            // package.json
+            {
+                "sideEffects": false
+            }
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
+            const HtmlWebpackPlugin = require('html-webpack-plugin')
+            const CleanWebpackPlugin = require('clean-webpack-plugin')
+            const webpack = require('webpack')
+
+            module.exports = {
+                mode: 'production',
+                devtool: 'cheap-module-source-map',
+                entry:{
+                    main: './src/index.js'
+                },
+                devServer: {
+                    contentBase: './dist',
+                    open: true,
+                    port: 8080,
+                    hot: true,
+                    hotOnly: true
+                },
+                module: {
+                    rules: [{
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        loader: 'babel-loader',
+                        options: {
+                            presets: [[
+                                "@babel/preset-env", {
+                                targets: {
+                                    edge: "17",
+                                    firefox: "60",
+                                    chrome: "67",
+                                    safari: "11.1",
+                                },
+                                useBuiltIns: 'usage'    // 只添加用到对象或函数
+                            }]]
+                        }
+                    },{
+                        test: /\.(jpg|png|gif)$/,
+                        use: {
+                            loader: 'url-loader',
+                            options: {
+                                name: '[name].[hash].[ext]',
+                                outputPath: 'images/',
+                                limit: 10240
+                            }
+                        }
+                    },{
+                        test: /\.(eot|ttf|svg)$/,
+                        use: {
+                            loader: 'file-loader'
+                        }
+                    },{
+                        test: /\.scss$/,
+                        use: [
+                            'style-loader',
+                            {
+                                loader: 'css-loader',
+                                options: {
+                                    importLoaders: 2
+                                }
+                            },
+                            'sass-loader',
+                            'postcss-loader'
+                        ]
+                    },{
+                        test: /\.css$/,
+                        use: [
+                            'style-loader',
+                            'css-loader',
+                            'postcss-loader'
+                        ]
+                    }]
+                },
+                plugins: [
+                    new HtmlWebpackPlugin({
+                        template: 'src/index.html'
+                    }),
+                    new CleanWebpackPlugin(),
+                    new webpack.HotModuleReplacementPlugin()
+                ],
+                // optimization: {          // production 模式下，usedExports 自动开启，不用再手动开启
+                //     usedExports: true
+                // },
+                output: {
+                    filename: '[name].js',  // [name] 值根据 entry 的 key 值决定的
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
