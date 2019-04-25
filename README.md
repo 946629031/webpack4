@@ -1692,9 +1692,11 @@ webpack4 各种语法 入门讲解
             ```
     - #### 3.最佳配置：开发环境、生产环境
         - 1.存在问题
-            - 执行完上面的配置 [2.开发环境、生产环境 配置文件分而治之](#2.开发环境、生产环境-配置文件分而治之) 之后，你会发现，```webpack.dev.js``` 和 ```webpack.prod.js``` 两个配置文件的内容重复代码比较多，那么该如何简化呢？
-        - ##### 1.抽取公共代码 ```webpack.dev.js``` 和 ```webpack.prod.js```
-            - 项目结构目录
+            - 执行完上面的配置 [2.开发环境、生产环境 配置文件分而治之](#2开发环境生产环境-配置文件分而治之-webpackdevjs-和-webpackprodjs) 之后，你会发现，```webpack.dev.js``` 和 ```webpack.prod.js``` 两个配置文件的内容重复代码比较多，那么该如何减少重复代码呢？
+        - ##### 2.抽取公共代码 ```webpack.dev.js``` 和 ```webpack.prod.js```
+            - ```npm i -D webpack-merge``` 借助 webpack-merge 模块，合并配置文件
+            - 项目配置
+                - 项目结构目录
                 ```
                 webpack-demo
                 +   |- /build
@@ -1709,3 +1711,128 @@ webpack4 各种语法 入门讲解
                     |- package.json
                     |- postcss.config.js
                 ```
+                ```js
+                // package.json
+                {
+                    "scripts": {
+                        "dev"  : "webpack-dev-server --config ./build/webpack.dev.js",  // 开发环境
+                        "build": "webpack --config ./build/webpack.prod.js"   // 线上环境
+                    }
+                }
+                ```
+                ```js
+                // webpack.prod.js
+                const merge = require('webpack-merge')
+                const commonConfig = require('./webpack.common.js')
+
+                const prodConfig = {
+                    mode: "production",
+                    devtool: "cheap-module-source-map"
+                }
+
+                module.exports = merge(commonConfig, prodConfig)
+                ```
+                ```js
+                // webpack.dev.js
+                const webpack = require('path')
+                const merge = require('webpack-merge')
+                const commonConfig = require('./webpack.common.js')
+
+                const devConfig = {
+                    mode: 'development',
+                    devtool: 'cheap-module-eval-source-map',
+                    devServer: {
+                        contentBase: './dist',
+                        open: true,
+                        port: 8080,
+                        hot: true
+                    },
+                    plugins: [
+                        new webpack.HotModuleReplacementPlugin()
+                    ],
+                    optimization: {
+                        usedExports: true
+                    }
+                }
+
+                module.exports = merge(commonConfig, devConfig)
+                ```
+                ```js
+                // webpack.common.js
+                const path = require('path')
+                const HtmlWebpackPlugin = require('html-webpack-plugin')
+                const CleanWebpackPlugin = require('clean-webpack-plugin')
+
+                module.exports = {
+                    entry: {
+                        main: './src/index.js'
+                    },
+                    module: {
+                        rules: [{
+                            test: /\.js$/,
+                            exclude: /node_modules/,
+                            loader: 'babel-loader',
+                            options: {
+                                presets: [[
+                                    "@babel/preset-env", {
+                                    targets: {
+                                        edge: "17",
+                                        firefox: "60",
+                                        chrome: "67",
+                                        safari: "11.1",
+                                    },
+                                    useBuiltIns: 'usage'
+                                }]]
+                            }
+                        },{
+                            test: /\.(jpg|png|gif)$/,
+                            use: {
+                                loader: 'url-loader',
+                                options: {
+                                    name: '[name].[hash].[ext]',
+                                    outputPath: 'images/',
+                                    limit: 10240
+                                }
+                            }
+                        },{
+                            test: /\.(eot|ttf|svg)$/,
+                            use: {
+                                loader: 'file-loader'
+                            }
+                        },{
+                            test: /\.scss$/,
+                            use: [
+                                'style-loader',
+                                {
+                                    loader: 'css-loader',
+                                    options: {
+                                        importLoaders: 2
+                                    }
+                                },
+                                'sass-loader',
+                                'postcss-loader'
+                            ]
+                        },{
+                            test: /\.css$/,
+                            use: [
+                                'style-loader',
+                                'css-loader',
+                                'postcss-loader'
+                            ]
+                        }]
+                    },
+                    plugins: [
+                        new HtmlWebpackPlugin({
+                            template: 'src/index.html'
+                        }),
+                        new CleanWebpackPlugin()
+                    ],
+                    output: {
+                        filename: '[name].js',
+                        path: path.resolve(__dirname, 'dist')
+                    }
+                }
+                ```
+            - 都配置完后，都执行打包命令，验证是否配置正确
+                - ```npm run dev```
+                - ```npm run build```
