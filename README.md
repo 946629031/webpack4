@@ -1071,7 +1071,9 @@ webpack4 各种语法 入门讲解
 - ### 3-11 使用 ```Babel``` 处理 ES6 语法
     - [Babel 官网](https://babeljs.io/setup#installation)
     - 1.安装 ```npm install --save-dev babel-loader @babel/core```
-    - 2.配置
+    - 2.```npm i -D @babel/preset-env```
+        - 为什么还要安装 @babel/preset-env 呢？实际上 babel-loader 只是 webpack和babel 的通信桥梁，而 ```@babel/preset-env``` 才能 ES6 转成 ES5
+    - 3.配置
         ```js
         // webpack.config.js
         module:{
@@ -1085,8 +1087,6 @@ webpack4 各种语法 入门讲解
             ]
         }
         ```
-    - 3.```npm i @babel/preset-env -D```
-        - 为什么还要安装 @babel/preset-env 呢？实际上 babel-loader 只是 webpack和babel 的通信桥梁，而 ```@babel/preset-env``` 才能 ES6 转成 ES5
     - 4.在 ```webpack.config.js```中 module.rules 增加 ```options: { presets: ["@babel/preset-env"] }```
     - 5.```polyfill```
         - 在走完前面4步之后，还是有一些 对象 或 函数，在低版本的浏览器是没有的，所以这时候 **就要把这些缺失的函数补充进来**，这时候就要用到 ```polyfill``` 了
@@ -1734,7 +1734,7 @@ webpack4 各种语法 入门讲解
                 ```
                 ```js
                 // webpack.dev.js
-                const webpack = require('path')
+                const webpack = require('webpack')
                 const merge = require('webpack-merge')
                 const commonConfig = require('./webpack.common.js')
 
@@ -1825,11 +1825,18 @@ webpack4 各种语法 入门讲解
                         new HtmlWebpackPlugin({
                             template: 'src/index.html'
                         }),
-                        new CleanWebpackPlugin()
+                        new CleanWebpackPlugin({
+                            default: ['dist'],
+                            root: path.resolve(__dirname, '../'),
+                            // 由于 CleanWebpackPlugin 默认会认为，当前文件目录就是 根目录，所以要重写 根目录
+                            
+                            cleanOnceBeforeBuildPatterns: ['*.js', '!vendor', '!vendor.manifest.json']
+                            // 这个参数配置要删除那些文件，和不要删除那些文件。要删除的文件'*.js'，不删除的文件前价格!
+                        })
                     ],
                     output: {
                         filename: '[name].js',
-                        path: path.resolve(__dirname, 'dist')
+                        path: path.resolve(__dirname, '../dist')
                     }
                 }
                 ```
