@@ -1355,7 +1355,7 @@ webpack4 各种语法 入门讲解
                     }
                 }
                 ```
-        - 3.```sideEffects``` 排除掉那些没有导出的模块
+        - 3.```sideEffects``` 帮助你, 排除掉那些没有导出的模块
             ```js
             // package.json
             {
@@ -1485,3 +1485,227 @@ webpack4 各种语法 入门讲解
                 }
             }
             ```
+
+- ### 4-2 ```Development``` 和 ```Production``` 模式的区分打包
+    - 1.我们对 ```Development``` 和 ```Production```  的功能要求不同
+        - ```Development``` 模式下，我们希望
+            - 1.```Webpack-Dev-Server``` 可以帮我们启动一个本地服务器，而且这个服务器还集成了 ```Hot Module Replacement```, 只要我更改了代码，它就会自动帮我重新打包，然后会实时更新页面
+            - 2.```Source Map``` 错误提示尽可能全面，方便调试
+            - 3.不希望压缩代码，可以简单查阅，可以看到更多说明项
+        - ```Production``` 模式下
+            - 1.```Source Map``` 尽可能简洁，或直接另外生成 ```.map``` 文件进行存储
+            - 2.希望压缩代码
+    - #### 2.开发环境、生产环境 配置文件分而治之 ```webpack.dev.js``` 和 ```webpack.prod.js```
+        - 存在问题：
+            - 由于对于 ```Development``` 和 ```Production``` 两种模式下的要求不同，如果只是通过手动修改 ```webpack.config.js``` 就会显得很麻烦。那么有没有什么方便的方法呢？看下面
+        - ```webpack.dev.js``` 开发环境配置文件
+            ```js
+            // webpack.dev.js
+            const path = require('path')
+            const HtmlWebpackPlugin = require('html-webpack-plugin')
+            const CleanWebpackPlugin = require('clean-webpack-plugin')
+            const webpack = require('webpack')
+
+            module.exports = {
+                mode: 'development',    // 1. 切换模式
+                devtool: 'cheap-module-eval-source-map',  // 2.添加 eval
+                entry:{
+                    main: './src/index.js'
+                },
+                devServer: {             // 3.开启 devServer
+                    contentBase: './dist',
+                    open: true,
+                    port: 8080,
+                    hot: true,
+                    hotOnly: true   // 不自动刷新页面，只更新css (静态文件)
+                },
+                module: {
+                    rules: [{
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        loader: 'babel-loader',
+                        options: {
+                            presets: [[
+                                "@babel/preset-env", {
+                                targets: {
+                                    edge: "17",
+                                    firefox: "60",
+                                    chrome: "67",
+                                    safari: "11.1",
+                                },
+                                useBuiltIns: 'usage'    // 只添加用到对象或函数
+                            }]]
+                        }
+                    },{
+                        test: /\.(jpg|png|gif)$/,
+                        use: {
+                            loader: 'url-loader',
+                            options: {
+                                name: '[name].[hash].[ext]',
+                                outputPath: 'images/',
+                                limit: 10240
+                            }
+                        }
+                    },{
+                        test: /\.(eot|ttf|svg)$/,
+                        use: {
+                            loader: 'file-loader'
+                        }
+                    },{
+                        test: /\.scss$/,
+                        use: [
+                            'style-loader',
+                            {
+                                loader: 'css-loader',
+                                options: {
+                                    importLoaders: 2
+                                }
+                            },
+                            'sass-loader',
+                            'postcss-loader'
+                        ]
+                    },{
+                        test: /\.css$/,
+                        use: [
+                            'style-loader',
+                            'css-loader',
+                            'postcss-loader'
+                        ]
+                    }]
+                },
+                plugins: [
+                    new HtmlWebpackPlugin({
+                        template: 'src/index.html'
+                    }),
+                    new CleanWebpackPlugin(),
+                    new webpack.HotModuleReplacementPlugin()    // 4.使用 HMR
+                ],
+                optimization: {
+                    usedExports: true   // 5.开启 usedExports
+                },
+                output: {
+                    filename: '[name].js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+        - ```webpack.prod.js``` 生产环境配置文件
+            ```js
+            // webpack.prod.js
+            const path = require('path')
+            const HtmlWebpackPlugin = require('html-webpack-plugin')
+            const CleanWebpackPlugin = require('clean-webpack-plugin')
+            const webpack = require('webpack')
+
+            module.exports = {
+                mode: 'production',    // 1. 切换模式
+                devtool: 'cheap-module-source-map',   // 2.eval 去掉
+                entry:{
+                    main: './src/index.js'
+                },
+                // devServer: {        // 3. 生产环境不需要 DevServer
+                //     contentBase: './dist',
+                //     open: true,
+                //     port: 8080,
+                //     hot: true,
+                //     hotOnly: true
+                // },
+                module: {
+                    rules: [{
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        loader: 'babel-loader',
+                        options: {
+                            presets: [[
+                                "@babel/preset-env", {
+                                targets: {
+                                    edge: "17",
+                                    firefox: "60",
+                                    chrome: "67",
+                                    safari: "11.1",
+                                },
+                                useBuiltIns: 'usage'
+                            }]]
+                        }
+                    },{
+                        test: /\.(jpg|png|gif)$/,
+                        use: {
+                            loader: 'url-loader',
+                            options: {
+                                name: '[name].[hash].[ext]',
+                                outputPath: 'images/',
+                                limit: 10240
+                            }
+                        }
+                    },{
+                        test: /\.(eot|ttf|svg)$/,
+                        use: {
+                            loader: 'file-loader'
+                        }
+                    },{
+                        test: /\.scss$/,
+                        use: [
+                            'style-loader',
+                            {
+                                loader: 'css-loader',
+                                options: {
+                                    importLoaders: 2
+                                }
+                            },
+                            'sass-loader',
+                            'postcss-loader'
+                        ]
+                    },{
+                        test: /\.css$/,
+                        use: [
+                            'style-loader',
+                            'css-loader',
+                            'postcss-loader'
+                        ]
+                    }]
+                },
+                plugins: [
+                    new HtmlWebpackPlugin({
+                        template: 'src/index.html'
+                    }),
+                    new CleanWebpackPlugin(),
+                    // new webpack.HotModuleReplacementPlugin()   // 4. HMR 不需要
+                ],
+                // optimization: {
+                //     usedExports: true           // 5.usedExports 不需要
+                // },
+                output: {
+                    filename: '[name].js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+        - ```package.json```
+            ```js
+            // package.json
+            {
+                "scripts": {
+                    "dev"  : "webpack-dev-server --config webpack.dev.js",  // 开发环境
+                    "build": "webpack --config webpack.prod.js"   // 线上环境
+                }
+            }
+            ```
+    - #### 3.最佳配置：开发环境、生产环境
+        - 1.存在问题
+            - 执行完上面的配置 [2.开发环境、生产环境 配置文件分而治之](#2.开发环境、生产环境-配置文件分而治之) 之后，你会发现，```webpack.dev.js``` 和 ```webpack.prod.js``` 两个配置文件的内容重复代码比较多，那么该如何简化呢？
+        - ##### 1.抽取公共代码 ```webpack.dev.js``` 和 ```webpack.prod.js```
+            - 项目结构目录
+                ```
+                webpack-demo
+                +   |- /build
+                        |- webpack.common.js
+                        |- webpack.dev.js
+                        |- webpack.prod.js
+                +   |- /dist
+                +   |- /node_modules
+                +   |- /src
+                    |- .babelrc
+                    |- package-lock.json
+                    |- package.json
+                    |- postcss.config.js
+                ```
