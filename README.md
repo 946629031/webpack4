@@ -27,6 +27,8 @@ webpack4 各种语法 入门讲解
     - [本章总结 最佳配置](#第3章-Webpack-的核心概念总结-最佳配置)
 - [第4章 Webpack 的高级概念](##第4章-webpack-的高级概念)
     - [4-1 Tree Shaking 概念详解](#4-1-tree-shaking-概念详解)
+    - [4-2 ```Development``` 和 ```Production``` 模式的区分打包](#4-2-development-和-production-模式的区分打包)
+    - [4-3 ```Code Splitting``` 代码分割](#4-3-Code-Splitting-代码分割)
 - [第5章](#)
 
 ----
@@ -1843,3 +1845,137 @@ webpack4 各种语法 入门讲解
             - 都配置完后，都执行打包命令，验证是否配置正确
                 - ```npm run dev```
                 - ```npm run build```
+- ### 4-3 ```Code Splitting``` 代码分割
+    - #### 代码分割 总结：
+        - 1.代码分割，和 Webpack 无关
+        - 2.Webpack 中实现代码分割，有两中方式
+            - 1.同步加载代码：只需要在 ```webpack.common.js``` 中做 ```optimization``` 配置即可
+            - 2.异步加载代码(import)：异步代码，无需做任何配置，会自动进行代码分割，放置到新的文件中
+    - 1.```Code Splitting``` 到底是什么？
+        - 为什么需要 ```Code Splitting``` ?
+            - 现在我有一个业务代码 ```main.js```
+                ```js
+                // main.js
+                const _ = require('lodash.js')  // 引入 lodash.js
+
+                console.log(_.join(['a','b','b'], '***'))   // 拼接字符串，以 '***' 分割
+                console.log(_.join(['a','d','c'], '***'))
+                ```
+            - 假设
+                - ```lodash.js``` 为 1Mb，
+                - 业务代码```main.js``` 也为 1Mb。
+                - 那么打包后，整个 ```main.js``` 为 2Mb
+                - 当页面业务逻辑发生变化时，又要重新加载 2Mb 的内容，但是其中 ```lodash.js```(1Mb) 是没变的，这样的话，会很浪费性能和资源
+            - 另外一种方式：**手动代码分割**
+                - ```main.js``` 拆成 ```lodash.js```(1Mb) 和 ```main.js```(1Mb)
+                - 当页面业务逻辑发生变化时，只需要重新 加载 ```main.js```(1Mb) 即可
+                ```js
+                // lodash.js 函数库
+                const _ = require('lodash.js')
+                window._ = _
+                ```
+                ```js
+                // main.js 业务逻辑
+                console.log(_.join(['a','b','b'], '***'))   // 拼接字符串，以 '***' 分割
+                console.log(_.join(['a','d','c'], '***'))
+                ```
+                ```js
+                // webpack.config.js
+                const path = require('path')
+
+                module.exports = {
+                    entry: {
+                        main: './src/index.js',
+                        lodash: './src/lodash.js'
+                    },
+                    output: {
+                        filename: '[name].js',
+                        path: path.resolve(__dirname, 'dist')
+                    }
+                }
+                ```
+    - 2.```splitChunks``` 自动代码分割
+        - 1.配置
+            ```js
+            // webpack.common.js
+            const path = require('path')
+
+            module.exports = {
+                entry: {
+                    main: './src/index.js'
+                },
+                optimization: {
+                    splitChunks: {      // 配置 splitChunks 自动代码分割
+                        chunks: 'all'
+                    }
+                },
+                output: {
+                    filename: '[name].js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            ```js
+            // index.js
+            import _ from 'lodash'  // 同步加载模块
+            
+            console.log(_.join(['a','b','b'], '***'))
+            console.log(_.join(['a','d','c'], '***'))
+            ```
+        - 2.打包结果
+            - 业务代码 ```dis/main.js```
+            - 第三方库 ```dis/vendors~main.js```
+    - 3.异步加载模块, (另一种代码分割方法)
+        - 异步加载第三方模块，不需要在 ```webpack.common.js``` 中加
+            ```js
+            // webpack.common.js
+            const path = require('path')
+
+            module.exports = {
+                entry: {
+                    main: './src/index.js'
+                },
+                // ptimization: {
+                //     splitChunks: {       // 异步加载第三方模块，不需要
+                //         chunks: 'all'
+                //     }
+                },
+                output: {
+                    filename: '[name].js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+        - 业务代码
+            ```js
+            // index.js
+            // 思路：异步加载lodash.js，加载成功后，赋值给"_"，并创建 element, 将其挂载到 body 上
+            function getComponent(){
+                return import('lodash').then(( default: _ ) => {
+                    var element = document.createElement('div')
+                    element.innerHTML = _.join(['Dell','Lee'], '-')
+                    return element
+                })
+            }
+
+            getComponent().then(element => {
+                document.body.appendChild(element)
+            })
+            ```
+        - 执行打包后报错
+            - "support for the experimental syntax dynamicImport is not currently enabled"
+            - 目前不支持实验性语法dynamicImport
+            - 解决方法：
+                - 借助 babel ```npm i -D babel-plugin-dynamic-import-webpack```
+                - ```.babelrc```文件，放在项目根目录
+                    ```js
+                    {
+                        plugins: ["dynamic-import-webpack"]
+                    }
+                    ```
+        - 再执行打包后，生成文件
+            - 业务代码 ```dist/main.js```
+            - 第三方库 ```dist/0.js```
+
+
+        
