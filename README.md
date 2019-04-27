@@ -1925,9 +1925,9 @@ webpack4 各种语法 入门讲解
         - 2.打包结果
             - 业务代码 ```dis/main.js```
             - 第三方库 ```dis/vendors~main.js```
-    - 3.异步加载模块, (另一种代码分割方法)
+    - #### 3.异步加载模块, (另一种代码分割方法)
         - 异步加载第三方模块，不需要在 ```webpack.common.js``` 中加
-            ```js
+            ```js ```splitChunks```
             // webpack.common.js
             const path = require('path')
 
@@ -1951,7 +1951,7 @@ webpack4 各种语法 入门讲解
             // index.js
             // 思路：异步加载lodash.js，加载成功后，赋值给"_"，并创建 element, 将其挂载到 body 上
             function getComponent(){
-                return import('lodash').then(( default: _ ) => {
+                return import('lodash').then(( {default: _} ) => {
                     var element = document.createElement('div')
                     element.innerHTML = _.join(['Dell','Lee'], '-')
                     return element
@@ -1969,6 +1969,7 @@ webpack4 各种语法 入门讲解
                 - 借助 babel ```npm i -D babel-plugin-dynamic-import-webpack```
                 - ```.babelrc```文件，放在项目根目录
                     ```js
+                    // .babelrc
                     {
                         plugins: ["dynamic-import-webpack"]
                     }
@@ -1977,5 +1978,106 @@ webpack4 各种语法 入门讲解
             - 业务代码 ```dist/main.js```
             - 第三方库 ```dist/0.js```
 
+- ### 4-5 ```Split Chunks Plugin``` 配置参数详解
+    - 1.存在问题
+        在 [3.异步加载模块, (另一种代码分割方法)](#3.异步加载模块,-(另一种代码分割方法)) 项目中，最终打包后生成的代码，第三方库被命名为 ```0.js```。那么如果我需要改它的名字呢？
+    - 2.在异步加载组件中，我们有一种语法，叫 ```Magic Comments```魔法注释。异步加载的组件，加载完后会被赋值给魔法注释的值，即给组件命名
+        ```js
+        // index.js
+        function getComponent(){
+            return import(/* webpackChunkName:"lodash" */ 'lodash').then(( {default: _} ) => {
+                var element = document.createElement('div')
+                element.innerHTML = _.join(['Dell','Lee'], '_')
+                return element
+            })
+        }
 
-        
+        getComponent().then(element => {
+            document.body.appendChild(element)
+        })
+        ```
+        执行打包后发现，```dist/0.js```，还是没有成功命名为 ```lodash.js```，原因：```dynamic-import-webpack``` 不是官方插件，它不支持魔法注释
+        ```js
+        // .babelrc
+        {
+            presets: [[
+                "@babel/preset-env", {
+                    targets: {
+                        edge: "17",
+                        firefox: "60",
+                        chrome: "67",
+                        safari: "11.1"
+                    },
+                    // useBuiltIns: 'usage'
+                }
+            ]],
+            // plugins: ["dynamic-import-webpack"]  // 非官方插件
+            plugins: ["@babel/plugin-syntax-dynamic-import"]    // 官方推荐插件
+        }
+        ```
+        - ```npm i -D @babel/plugin-syntax-dynamic-import```
+        - 再执行打包，这时候 动态加载进来的组件被命名为：```dist/vendors~lodash.js```
+    - 3.如果要把 动态加载组件 被直接命名为 ```lodash.js```，需要配置 ```webpack.common.js``` 里面的 ```optimization```
+        ```js
+        // webpack.common.js
+        const path = require('path')
+
+        module.exports = {
+            entry: {
+                main: './src/index.js'
+            },
+            module: {
+                rules: [{
+                    test: /\.js$/,
+                    exclude: /node_modules/,
+                    loader: 'babel-loader'
+                }]
+            },
+            optimization: {
+                splitChunks: {  // 无论同步加载代码分割，还是异步加载代码分割，这个参数都有效
+                    chunks: 'all',
+                    cacheGroups: {
+                        vendors: false,
+                        default: false
+                    }
+                }
+            },
+            output: {
+                filename: '[name].js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+    - 4.#### ```SplitChunksPlugin``` 参数详解
+        ```js
+        // webpack.config.js
+        module.exports = {
+            // ...
+            optimization: {
+                splitChunks: {
+                    chunks: 'async', //可选参数 all, async, initial(同步)
+                    minSize: 30000,  // 超过30Kb 的才执行分割
+                    maxSize: 0,      // 一般情况下不配置，即不设置上限，多少进来，就多少出去
+                    // 如果配置了 'maxSize: 50000' (50Kb)，如果加载的模块为 1Mb，那么它会尝试性的将它分割成 20个 50Kb 的子文件
+                    miniChunks: 1,   // 当一个模块，被 引用超过多次才做代码分割    (require() 或 import )
+                    maxAsyncRequests: 5,    // 按需加载时的最大并行请求数，一般不用改。如果超过，则不再分割代码
+                    maxInitialRequests: 3,  // 入口点处的最大并行请求数。一般不用改。  如果超过，则不再分割代码
+                    automaticNameDelimiter: '~',    // 分割代码的定界符，如 vendors~main.js
+                    name: true,      // 开启 cacheGroups 的自动命名
+                    cacheGroups: {  // 缓存组。当initial(同步)，才会走cacheGroups。chunks 和 cacheGroups 要配合使用，才有效
+                        vendors: {  // 只要是加载在 node_modules 内的模块，都打包到一起，并命名为'vendors.js'
+                            test: /[\\/]node_modules[\\/]/,
+                            priority: -10,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
+                            filename: 'vendors.js'  // 如果没配置filename，那么打包文件名为 vendors~main.js，意思是：属于vendors组，且入口文件为 main.js
+                        },
+                        default: {  // 如果模块不在 node_modules 里，就都会走 default 这里
+                            minChunks: 2,
+                            priority: -20,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
+                            reuseExistingChunk: true,   // 如果一个模块已经被打包过了，再次打包的时候就会跳过，直接复用之前的打包
+                            filename: 'common.js'  // 如果没配置filename，那么打包文件名为 default~main.js，意思是：属于default组，且入口文件为 main.js
+                        }
+                    }
+                }
+            }
+        }
+        ```
