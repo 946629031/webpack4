@@ -29,7 +29,8 @@ webpack4 各种语法 入门讲解
     - [4-1 Tree Shaking 概念详解](#4-1-tree-shaking-概念详解)
     - [4-2 ```Development``` 和 ```Production``` 模式的区分打包](#4-2-development-和-production-模式的区分打包)
     - [4-3 ```Code Splitting``` 代码分割](#4-3-Code-Splitting-代码分割)
-        - [4.```SplitChunksPlugin``` 参数详解](#4splitchunksplugin-参数详解)
+    - [4-5 ```Split Chunks Plugin``` 配置参数详解](#4-5-Split Chunks Plugin-配置参数详解)
+    - [4-6.```SplitChunksPlugin``` 参数详解](#4-6-SplitChunksPlugin-参数详解)
 - [第5章](#)
 
 ----
@@ -2049,37 +2050,37 @@ webpack4 各种语法 入门讲解
             }
         }
         ```
-    - #### 4.```SplitChunksPlugin``` 参数详解
-        [SplitChunksPlugin 官网参数详解](https://webpack.js.org/plugins/split-chunks-plugin#optimizationsplitchunks)
-        ```js
-        // webpack.config.js
-        module.exports = {
-            // ...
-            optimization: {
-                splitChunks: {
-                    chunks: 'async', //可选参数 all, async, initial(同步)
-                    minSize: 30000,  // 超过30Kb 的才执行分割
-                    maxSize: 0,      // 一般情况下不配置，即不设置上限，多少进来，就多少出去
-                    // 如果配置了 'maxSize: 50000' (50Kb)，如果加载的模块为 1Mb，那么它会尝试性的将它分割成 20个 50Kb 的子文件
-                    miniChunks: 1,   // 当一个模块，被 引用超过多次才做代码分割    (require() 或 import )
-                    maxAsyncRequests: 5,    // 按需加载时的最大并行请求数，一般不用改。如果超过，则不再分割代码
-                    maxInitialRequests: 3,  // 入口点处的最大并行请求数。一般不用改。  如果超过，则不再分割代码
-                    automaticNameDelimiter: '~',    // 分割代码的定界符，如 vendors~main.js
-                    name: true,      // 开启 cacheGroups 的自动命名
-                    cacheGroups: {  // 缓存组。当initial(同步)，才会走cacheGroups。chunks 和 cacheGroups 要配合使用，才有效
-                        vendors: {  // 只要是加载在 node_modules 内的模块，都打包到一起，并命名为'vendors.js'
-                            test: /[\\/]node_modules[\\/]/,
-                            priority: -10,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
-                            filename: 'vendors.js'  // 如果没配置filename，那么打包文件名为 vendors~main.js，意思是：属于vendors组，且入口文件为 main.js
-                        },
-                        default: {  // 如果模块不在 node_modules 里，就都会走 default 这里
-                            minChunks: 2,
-                            priority: -20,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
-                            reuseExistingChunk: true,   // 如果一个模块已经被打包过了，再次打包的时候就会跳过，直接复用之前的打包
-                            filename: 'common.js'  // 如果没配置filename，那么打包文件名为 default~main.js，意思是：属于default组，且入口文件为 main.js
-                        }
+- ### 4-6.```SplitChunksPlugin``` 参数详解
+    [SplitChunksPlugin 官网参数详解](https://webpack.js.org/plugins/split-chunks-plugin#optimizationsplitchunks)
+    ```js
+    // webpack.config.js
+    module.exports = {
+        // ...
+        optimization: {
+            splitChunks: {
+                chunks: 'async', //可选参数 all, async, initial(同步)
+                minSize: 30000,  // 超过30Kb 的才执行分割
+                maxSize: 0,      // 一般情况下不配置，即不设置上限，多少进来，就多少出去
+                // 如果配置了 'maxSize: 50000' (50Kb)，如果加载的模块为 1Mb，那么它会尝试性的将它分割成 20个 50Kb 的子文件
+                miniChunks: 1,   // 当一个模块，被 引用超过多次才做代码分割    (require() 或 import )
+                maxAsyncRequests: 5,    // 按需加载时的最大并行请求数，一般不用改。如果超过，则不再分割代码
+                maxInitialRequests: 3,  // 入口点处的最大并行请求数。一般不用改。  如果超过，则不再分割代码
+                automaticNameDelimiter: '~',    // 分割代码的定界符，如 vendors~main.js
+                name: true,      // 开启 cacheGroups 的自动命名
+                cacheGroups: {  // 缓存组。当initial(同步)，才会走cacheGroups。chunks 和 cacheGroups 要配合使用，才有效
+                    vendors: {  // 只要是加载在 node_modules 内的模块，都打包到一起，并命名为'vendors.js'
+                        test: /[\\/]node_modules[\\/]/,
+                        priority: -10,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
+                        filename: 'vendors.js'  // 如果没配置filename，那么打包文件名为 vendors~main.js，意思是：属于vendors组，且入口文件为 main.js
+                    },
+                    default: {  // 如果模块不在 node_modules 里，就都会走 default 这里
+                        minChunks: 2,
+                        priority: -20,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
+                        reuseExistingChunk: true,   // 如果一个模块已经被打包过了，再次打包的时候就会跳过，直接复用之前的打包
+                        filename: 'common.js'  // 如果没配置filename，那么打包文件名为 default~main.js，意思是：属于default组，且入口文件为 main.js
                     }
                 }
             }
         }
-        ```
+    }
+    ```
