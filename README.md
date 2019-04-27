@@ -29,8 +29,8 @@ webpack4 各种语法 入门讲解
     - [4-1 Tree Shaking 概念详解](#4-1-tree-shaking-概念详解)
     - [4-2 ```Development``` 和 ```Production``` 模式的区分打包](#4-2-development-和-production-模式的区分打包)
     - [4-3 ```Code Splitting``` 代码分割](#4-3-Code-Splitting-代码分割)
-    - [4-5 ```Split Chunks Plugin``` 配置参数详解](#4-5-Split Chunks Plugin-配置参数详解)
-    - [4-6.```SplitChunksPlugin``` 参数详解](#4-6-SplitChunksPlugin-参数详解)
+    - [4-5 ```Split Chunks Plugin``` 配置参数详解](#4-5-split-chunks-plugin-配置参数详解)
+    - [4-6.```SplitChunksPlugin``` 参数详解](#4-6splitchunksplugin-参数详解)
 - [第5章](#)
 
 ----
