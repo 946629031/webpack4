@@ -1928,8 +1928,8 @@ webpack4 各种语法 入门讲解
             - 业务代码 ```dis/main.js```
             - 第三方库 ```dis/vendors~main.js```
     - #### 3.异步加载模块, (另一种代码分割方法)
-        - 异步加载第三方模块，不需要在 ```webpack.common.js``` 中加
-            ```js ```splitChunks```
+        - 异步加载第三方模块，不需要在 ```webpack.common.js``` 中加 ```splitChunks```
+            ```js 
             // webpack.common.js
             const path = require('path')
 
@@ -1965,7 +1965,7 @@ webpack4 各种语法 入门讲解
             })
             ```
         - 执行打包后报错
-            - "support for the experimental syntax dynamicImport is not currently enabled"
+            - <p style="color:red">"support for the experimental syntax dynamicImport is not currently enabled"</p>
             - 目前不支持实验性语法dynamicImport
             - 解决方法：
                 - 借助 babel ```npm i -D babel-plugin-dynamic-import-webpack```
@@ -2051,36 +2051,246 @@ webpack4 各种语法 入门讲解
         }
         ```
 - ### 4-6.```SplitChunksPlugin``` 参数详解
-    [SplitChunksPlugin 官网参数详解](https://webpack.js.org/plugins/split-chunks-plugin#optimizationsplitchunks)
-    ```js
-    // webpack.config.js
-    module.exports = {
-        // ...
-        optimization: {
-            splitChunks: {
-                chunks: 'async', //可选参数 all, async, initial(同步)
-                minSize: 30000,  // 超过30Kb 的才执行分割
-                maxSize: 0,      // 一般情况下不配置，即不设置上限，多少进来，就多少出去
-                // 如果配置了 'maxSize: 50000' (50Kb)，如果加载的模块为 1Mb，那么它会尝试性的将它分割成 20个 50Kb 的子文件
-                miniChunks: 1,   // 当一个模块，被 引用超过多次才做代码分割    (require() 或 import )
-                maxAsyncRequests: 5,    // 按需加载时的最大并行请求数，一般不用改。如果超过，则不再分割代码
-                maxInitialRequests: 3,  // 入口点处的最大并行请求数。一般不用改。  如果超过，则不再分割代码
-                automaticNameDelimiter: '~',    // 分割代码的定界符，如 vendors~main.js
-                name: true,      // 开启 cacheGroups 的自动命名
-                cacheGroups: {  // 缓存组。当initial(同步)，才会走cacheGroups。chunks 和 cacheGroups 要配合使用，才有效
-                    vendors: {  // 只要是加载在 node_modules 内的模块，都打包到一起，并命名为'vendors.js'
-                        test: /[\\/]node_modules[\\/]/,
-                        priority: -10,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
-                        filename: 'vendors.js'  // 如果没配置filename，那么打包文件名为 vendors~main.js，意思是：属于vendors组，且入口文件为 main.js
-                    },
-                    default: {  // 如果模块不在 node_modules 里，就都会走 default 这里
-                        minChunks: 2,
-                        priority: -20,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
-                        reuseExistingChunk: true,   // 如果一个模块已经被打包过了，再次打包的时候就会跳过，直接复用之前的打包
-                        filename: 'common.js'  // 如果没配置filename，那么打包文件名为 default~main.js，意思是：属于default组，且入口文件为 main.js
+    - 1.一般情况下，我们配置 ```splitChunks``` 直接使用 ```chunks: 'all'``` 就可以，其他的都用默认配置就行
+        ```js
+        // webpack.config.js
+        module.exports = {
+            // ...
+            optimization: {
+                splitChunks: { // 默认配置
+                    chunks: 'all' // 可选参数 all, async, initial(同步)
+                }
+            }
+        }
+        ```
+    - 2.```SplitChunksPlugin``` ，默认参数详解
+        [SplitChunksPlugin 官网参数详解](https://webpack.js.org/plugins/split-chunks-plugin#optimizationsplitchunks)
+        ```js
+        // webpack.config.js
+        module.exports = {
+            // ...
+            optimization: {
+                splitChunks: {
+                    chunks: 'async', //可选参数 all, async, initial(同步)
+                    minSize: 30000,  // 超过30Kb 的才执行分割
+                    maxSize: 0,      // 一般情况下不配置，即不设置上限，多少进来，就多少出去
+                    // 如果配置了 'maxSize: 50000' (50Kb)，如果加载的模块为 1Mb，那么它会尝试性的将它分割成 20个 50Kb 的子文件
+                    minChunks: 1,   // 当一个模块，被 引用超过多次才做代码分割    (require() 或 import )
+                    maxAsyncRequests: 5,    // 按需加载时的最大并行请求数，一般不用改。如果超过，则不再分割代码
+                    maxInitialRequests: 3,  // 入口点处的最大并行请求数。一般不用改。  如果超过，则不再分割代码
+                    automaticNameDelimiter: '~',    // 分割代码的定界符，如 vendors~main.js
+                    name: true,      // 开启 cacheGroups 的自动命名
+                    cacheGroups: {  // 缓存组。当initial(同步)，才会走cacheGroups。chunks 和 cacheGroups 要配合使用，才有效
+                        vendors: {  // 只要是加载在 node_modules 内的模块，都打包到一起，并命名为'vendors.js'
+                            test: /[\\/]node_modules[\\/]/,
+                            priority: -10,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
+                            filename: 'vendors.js'  // 如果没配置filename，那么打包文件名为 vendors~main.js，意思是：属于vendors组，且入口文件为 main.js
+                        },
+                        default: {  // 如果模块不在 node_modules 里，就都会走 default 这里
+                            minChunks: 2,
+                            priority: -20,  // 优先级。当一个模块 如 jquery，即满足 vendors，又满足 default 的要求，priority值 大的优先执行
+                            reuseExistingChunk: true,   // 如果一个模块已经被打包过了，再次打包的时候就会跳过，直接复用之前的打包
+                            filename: 'common.js'  // 如果没配置filename，那么打包文件名为 default~main.js，意思是：属于default组，且入口文件为 main.js
+                        }
                     }
                 }
             }
         }
-    }
-    ```
+        ```
+- ### 4-7 ```Lazy Loading``` 懒加载，```Chunk``` 是什么？
+    - 1.先看同一功能的 ```同步加载实现```，和 ```异步加载实现``` 的方法
+        ```js
+        // 同步加载
+        import _ form 'lodash'
+
+        var element = document.createElement('div')
+        element.innnerHTML = _.join(['Dell','Lee'], '_')
+        document.body.appendChild(element)
+
+
+        // 异步加载  (懒加载)
+        function getComponent(){
+            return import(/* webpackChunkName: 'lodash' */ 'lodash').then(( {default:_} ) => {
+                var element = document.createElement('div')
+                element.innerHTML = _.join(['Dell','Lee'], '_')
+                return element
+            })
+        }
+
+        document.addEventListener('click', ()=>{
+            getComponent().then(element => {
+                document.body.appendChild(element)
+            })
+        })
+        ```
+        ```js
+        // webpack.common.js
+        const path = require('path')
+
+        module.exports = {
+            entry: {
+                main: './src/index.js'
+            },
+            module: {
+                rules: [{
+                    test: /\.js$/,
+                    exclude: /node_modules/,
+                    loader: 'babel-loader'
+                }]
+            },
+            output: {
+                filename: '[name].js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+        ```js
+        // .babelrc
+        {
+            presets: [[
+                "@babel/preset-env", {
+                    targets: {
+                        chrome: "67"
+                    },
+                    useBuiltIns: 'usage'
+                    // 当设置了 useBuiltIns: 'usage' 之后，业务代码就不必再次 import "@babel/polyfill"，因为它会自动引入
+                }
+            ]],
+            plugins: ["@babel/plugin-syntax-dynamic-import"]
+        }
+        ```
+    - 2.异步加载 懒加载 的特性
+        - 上面的例子中
+        - 异步加载，其实就是 ```Lazy Loading``` 懒加载
+        - 当你访问页面的时候，懒加载的模块组件 并不会也同时跟index.html 一起被加载进来，而是等到你调用了 import 的时候，才会加载。
+        - 懒加载的优点：性能好，按需加载，页面打开快
+        - import 这种语法其实是 ES6 提出的实验性的语法，
+        - ```import().then()```   import 后面跟一个 then() , 说明这其实是一个 Promise
+        - 如果你要用 ```import``` 这种语法，你就必须要用 ```polyfill``` 使其兼容低版本的浏览器
+    - 3.ES7 的异步加载，更简洁，但是要记住 用 babel/polyfill
+        ```js
+        // ES7异步加载  (懒加载)
+        async function getComponent(){
+            const { default: _ } = await import(/* webpackChunkName: 'lodash' */ 'lodash')
+            const element = document.createElement('div')
+            element.innerHTML = _.join(['Dell','Lee'], '_')
+            return element
+        }
+
+        document.addEventListener('click', ()=>{
+            getComponent().then(element => {
+                document.body.appendChild(element)
+            })
+        })
+        ```
+
+- ### 4-8 ```Bundle Analysis``` 打包分析，```Prefetching``` 预取，```Preloading``` 预加载
+    [```Bundle Analysis```， ```Prefetching```， ```Preloading``` webpack官网讲解](https://webpack.js.org/guides/code-splitting#prefetchingpreloading-modules)
+    - #### 1.```Bundle Analysis``` 打包分析
+        [webpack/analyse 官网](https://github.com/webpack/analyse)
+        - 1.要做打包分析的前提，是要先生成一个 **打包过程的描述文件**
+            - 打包命名内加一条这个，```webpack --profile --json > stats.js```
+            ```js
+            // package.json
+            {
+                // ...
+                "scripts":{
+                    "dev-build": "webpack --profile --json > stats.js --config ./build/webpack.dev.js"
+                }
+            }
+            ```
+        - 2.执行打包命令后，在根目录下会生成一个 ```stats.json``` **打包过程的描述文件**
+            - 借助分析工具，可视化的查看 **打包过程的描述文件**
+            - [【推荐】webpack-bundle-analyzer 比较好用，比较全面的分析 插件工具](https://github.com/webpack-contrib/webpack-bundle-analyzer)
+            - [webpack-visualizer 可视化分析工具](https://chrisbateman.github.io/webpack-visualizer/)
+            - [http://webpack.github.io/analyse](http://webpack.github.io/analyse)
+            - [webpack 官网推荐的分析工具大全](https://webpack.js.org/guides/code-splitting#bundle-analysis)
+    - #### 2.```Prefetching``` 预取，```Preloading``` 预加载
+        - 1.首先，问一个问题
+            ```js
+            // webpack.config.js
+            module.exports = {
+                // ...
+                optimization: {
+                    splitChunks: {
+                        chunks: 'async'     // 这里 webpack 默认值为，async ，那么为什么webpack官方推荐 默认值为 async 呢？
+                    }
+                }
+            }
+            ```
+        - 2.答：
+            - 如 jquery, lodash 这样的模块，我们同步加载 import 进来，打包生成页面后，当我们打开过一次页面后，jquery, lodash 就已经被加载过了，在第二次打开页面的时候，就会速度非常快，因为已经缓存到本地了。
+            - 但是，Webpack 并不满足于此，**Webpack 官方希望，我在第一次打开页面的时候，速度也能非常快。** 那么，如何才能实现呢？看下面
+        - 3.在过去，我们是这么实现这样的一个功能的
+            ```js
+            // index.js
+            document.addEventListener('click', () => {
+                const element = document.createElement('div')
+                element.innerHTML = "Dell Lee"
+                document.body.appendChild(element)
+            })
+            ```
+            **功能是实现了，但是，这样的代码 就完全没有优化空间了吗？？？**
+        - 4.```Show Coverage``` 检测代码利用率
+            - 在 Chrome 中，打开控制台
+            - ```ctrl + Shift + P``` 输入 ```Show Coverage``` 并打开
+            - 在 ```Show Coverage``` 面板左上角，有个灰色小圆点，点一下，它变红之后，刷新页面
+            - 刷新页面后，在 ```Show Coverage``` 面板中，可以看到 **各个文件的利用率** ```Unused Bytes```。绿色代表代码被执行了，红色代表没有被执行。
+            - [Chrome DevTools 代码覆盖率功能详解](https://zhuanlan.zhihu.com/p/26281581)
+        - 5.在上面 第3点 中
+            ```js
+            // index.js
+            document.addEventListener('click', () => {
+                // const element = document.createElement('div')
+                // element.innerHTML = "Dell Lee"
+                // document.body.appendChild(element)
+            })
+            ```
+            中间这三行代码，**在页面加载的时候，是不会被执行的，只有点击了页面，它被调用了之后，才会执行**
+        - ##### 6.异步加载交互代码
+            - **不会执行的代码，在页面加载的时候，你就把它下载下来，实际上是有性能浪费的**
+            - 那么，像这种交互的代码，应该怎么写呢？应该把它放到一个异步加载的模块里去
+            ```js
+            // click.js
+            function handleClick(){
+                const element = document.createElement('div')
+                element.innerHTML = "Dell Lee"
+                document.body.appendChild(element)
+            }
+
+            export default handleClick   // 导出 相当于 module.exports = handleClick
+            ```
+            ```js
+            // index.js
+            document.addEventListener('click', () => {
+                import('./click.js').then(( {default: func} ) => {  // import 进来的模块，赋值给 func
+                    func()
+                })
+            })
+            ```
+            - 像这样，只有多写些异步的代码，才能增加首次打开页面的速度
+            - 这也就是为什么 ```webpack.config.js``` module.exports.optimization.splitChunks.chunks 默认为 async 的原因
+        - 使用场景举例：
+            - [慕课网](https://www.imooc.com/) 里，右上角的 登陆功能
+            - 当我们登陆的时候，会弹出一个登陆弹窗，那这个登陆弹窗，实际上，在页面打开的时候，就不应该加载下来。
+            - 等到你点击登陆的时候，才去加载登陆弹窗的代码
+            - 但是，这样又会产生一个问题：就是当你点击的时候，才去请求，加载代码，就会使得页面需要去等待代码的加载，给人卡顿的感觉。
+            - 那什么才能帮我们解决这个问题呢？  就是接下来要讲的，**Prefetching** 预取，和 **Preloading** 预加载
+    - #### 2.```Prefetching``` 预取，```Preloading``` 预加载
+        - 当我们访问首页的时候，不需要加载登陆的逻辑，只需要加载首页的内容即可，等待首页的内容加载完后，**再去偷偷的加载登陆的逻辑即可。**
+        - 这样的话，等待首页内容加载完后，实际上网络带宽就已经空闲了，如果能够利用这个空闲的时间，把其他业务逻辑代码再加载进来，就能够解决 上面说的那个卡顿的问题了。
+        - **最佳实现方式**
+            ```js
+            // index.js
+            document.addEventListener('click', () => {
+                import(/* webpackPrefetch: true */ './click.js').then(( {default: func} ) => {  // 魔法注释/* webpackPrefetch: true */写上之后，当主要的js 加载完后，有空闲时，就会加载 click.js
+                    func()
+            })
+            ```
+        - ```Prefetching``` 预取，```Preloading``` 预加载 的区别
+            - ```Prefetching``` 预取
+                - 当主要的js 加载完后，有空闲时，就会加载你需要的js
+            ```Preloading``` 预加载
+                - 和主要的js文件一起加载
+            - Preloading 没有 Prefetching 的方式好
+    - #### 3.在做前端性能优化的时候，缓存不是最重要的点，就重要的点是 Code Coverage 代码覆盖率上面思考
