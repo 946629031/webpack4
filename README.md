@@ -1384,9 +1384,9 @@ webpack4 各种语法 入门讲解
                 // package.json
                 {
                     "sideEffects": [
-                        "@babel/polyfill",
-                        "*.css",
-                        "*.scss"
+                        "@babel/polyfill",  // Tree Shaking 直接跳过这个文件
+                        "*.css",            // Tree Shaking 直接跳过这个文件
+                        "*.scss"            // Tree Shaking 直接跳过这个文件
                     ]
                 }
                 ```
@@ -2140,6 +2140,7 @@ webpack4 各种语法 入门讲解
             },
             output: {
                 filename: '[name].js',
+                chunkFilename: '[name].chunk.js',   // 非入口文件entry，都会走chunkFilename这里。chunkname是未被列在entry中，却又需要被打包出来的文件命名配置。被异步引入的模块。或没被html直接引用的文件。
                 path: path.resolve(__dirname, 'dist')
             }
         }
@@ -2294,3 +2295,81 @@ webpack4 各种语法 入门讲解
                 - 和主要的js文件一起加载
             - Preloading 没有 Prefetching 的方式好
     - #### 3.在做前端性能优化的时候，缓存不是最重要的点，就重要的点是 Code Coverage 代码覆盖率上面思考
+- ### 4-9 Css 文件的代码分割，打包独立的css文件
+    - 过去对于css的打包，都是 ```css in js``` 方式的，css是被写在js文件里的，如
+        ```js
+        // index.js
+        import './style.css'
+
+        console.log('hello world')
+        ```
+        那么，如何才能生成独立的css文件呢？
+    - #### MiniCssExtractPlugin css提取插件
+        - 默认情况下，会把多个css文件，合并成一个css文件
+            ```js
+            // index.js
+            import './index.css'
+            import './index1.css'
+            ```
+            打包的结果，就只会生成一个 ```main.css```
+        - 有时候，如果发现都配置好了，执行打包后，还是没有生成独立的css文件，那么有可能是 被Tree Shaking 过滤掉了
+            ```js
+            // '/package.json'
+            {
+                "sideEffects": [
+                    "*.css"         // 让 Tree Shaking 不处理css文件，直接保留
+                ]
+            }
+            ```
+            ```js
+            // webpack.common.js
+            module.exports = {
+                // ...
+                optimization: {
+                    usedExports: true
+                }
+            }
+            ```
+    - #### Css压缩插件
+        - [Css压缩插件 官网](https://webpack.js.org/plugins/mini-css-extract-plugin/#minimizing-for-production)
+        - 1.安装插件 ```npm i -D optimize-css-assets-webpack-plugin```
+        ```js
+        // webpack.common.js
+        const path = require('path')
+        const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+        const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin')   // 第2步，引入插件
+
+        module.exports = {
+            entry: {
+                main: './src/index.js'
+            },
+            module: {
+                rules: [{
+                    test: /\.css$/,
+                    use: [
+                        MiniCssExtractPlugin.loader,
+                        'css-loader',
+                        'postcss-loader'
+                    ]
+                }]
+            },
+            plugins: [ new MiniCssExtractPlugin({}) ],
+            optimization: {
+                minimizer: [new OptimizeCSSAssetsPlugin({})],   // 第3步，配置
+                usedExports: true,
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        vendors: false,
+                        default: false
+                    }
+                }
+            },
+            output: {
+                filename: '[name].js',
+                path: path.resolve(__dirname, '../dist')
+            }
+        }
+        ```
+        // 未完.. 待续
+
