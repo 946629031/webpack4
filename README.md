@@ -31,6 +31,9 @@ webpack4 各种语法 入门讲解
     - [4-3 ```Code Splitting``` 代码分割](#4-3-Code-Splitting-代码分割)
     - [4-5 ```Split Chunks Plugin``` 配置参数详解](#4-5-split-chunks-plugin-配置参数详解)
     - [4-6 ```SplitChunksPlugin``` 参数详解](#4-6splitchunksplugin-参数详解)
+    - [4-7 ```Lazy Loading``` 懒加载，```Chunk``` 是什么？](##4-7-lazy-loading-懒加载chunk-是什么)
+    - [4-8 ```Bundle Analysis``` 打包分析，```Prefetching``` 预取，```Preloading``` 预加载](#4-8-bundle-analysis-打包分析prefetching-预取preloading-预加载)
+    - [4-9 Css 文件的代码分割，打包独立的css文件](#4-9-css-文件的代码分割打包独立的css文件)
 - [第5章](#)
 
 ----
@@ -2286,6 +2289,7 @@ webpack4 各种语法 入门讲解
             document.addEventListener('click', () => {
                 import(/* webpackPrefetch: true */ './click.js').then(( {default: func} ) => {  // 魔法注释/* webpackPrefetch: true */写上之后，当主要的js 加载完后，有空闲时，就会加载 click.js
                     func()
+                })
             })
             ```
         - ```Prefetching``` 预取，```Preloading``` 预加载 的区别
@@ -2330,6 +2334,37 @@ webpack4 各种语法 入门讲解
                 }
             }
             ```
+        - MiniCssExtractPlugin 配置
+            ```js
+            // webpack.config.js
+            const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+            const devMode = process.env.NODE_ENV !== 'production'
+
+            module.exports = {
+                plguins: [
+                    new MiniCssExtractPlugin({
+                        filename: devMode ? '[name].css' : '[name].[hash].css',
+                        chunkFilename: devMode ? '[id].css' : '[id].[hash].css'  // 当没有被 html文件 直接引用时，就会走这条
+                    })
+                ],
+                module: {
+                    rules: [{
+                        test: /\.(sa|sc|c)ss$/,
+                        use: [
+                            {
+                                loader: MiniCssExtractPlugin.loader,
+                                option: {
+                                    hmr: process.env.NODE_ENV === 'development'
+                                }
+                            },
+                            'css-loader',
+                            'postcss-loader',
+                            'sass-loader'
+                        ]
+                    }]
+                }
+            }
+            ```
     - #### Css压缩插件
         - [Css压缩插件 官网](https://webpack.js.org/plugins/mini-css-extract-plugin/#minimizing-for-production)
         - 1.安装插件 ```npm i -D optimize-css-assets-webpack-plugin```
@@ -2371,5 +2406,40 @@ webpack4 各种语法 入门讲解
             }
         }
         ```
-        // 未完.. 待续
+        
+    - #### 如果希望把所有css打包到一个文件
+        ```js
+        // webpack.config.js
+        const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
+        module.exports = {
+            optimization: {
+                splitChunks: {  // MiniCssExtractPlugin 的底层也要借助 splitChunks 模块
+                    cacheGroups: {
+                        styles: {
+                            name: 'styles',  // 命名为 styles
+                            test: /\.css$/,
+                            chunks: 'all',
+                            enforce: true    // 忽略掉其他 splitChunks默认参数
+                        }
+                    }
+                }
+            },
+            plugins: [
+                new MiniCssExtractPlugin({
+                    filename: '[name].css'
+                })
+            ],
+            modules: {
+                rules: [
+                    {
+                        test: /\.css$/,
+                        use: [MiniCssExtractPlugin.loader, 'css-loader']
+                    }
+                ]
+            }
+        }
+        ```
+
+    - #### 如果希望, 根据入口不同，打包成不同的 css文件
+        [【官网文档】如果希望, 根据入口不同，打包成不同的 css文件](https://webpack.js.org/plugins/mini-css-extract-plugin/#extracting-css-based-on-entry)
