@@ -2529,6 +2529,8 @@ webpack4 各种语法 入门讲解
 
         
 - ### 4-11 Shimming 垫片 的作用
+    - #### 什么是 Shimming ？
+        - 修改 webpack 默认行为，实现一些原始webpack 实现不了的效果，这种行为都叫做 Shimming 垫片行为
     - 1.来看一个问题
         ```js
         // index.js
@@ -2560,7 +2562,7 @@ webpack4 各种语法 入门讲解
                 $('body').css('background','red')   // 打包后执行，浏览器报错 $ is not defined
             }
             ```
-    - 2.借助 Shimming 让jquery变成全局作用域
+    - #### 2.借助 Shimming 让jquery变成全局作用域
         ```js
         // webpack.config.js
         const path = require('path')
@@ -2621,7 +2623,7 @@ webpack4 各种语法 入门讲解
             $('.main').css('background', _join(['green'], ''))  // 将 .main 背景色 通过lodash里的 join 设置为蓝色
         }
         ```
-    - 3.模块中的this指向
+    - #### 3.修改模块中 this指向
         - 1.看一例子
             ```js
             // index.js
