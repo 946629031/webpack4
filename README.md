@@ -2663,7 +2663,7 @@ webpack4 各种语法 入门讲解
                                     }]]
                                 },
                             },{
-                                loader: 'imports-loader?this=>window'
+                                loader: 'imports-loader?this=>window'   // 借助 imports-loader 使得 this 指向 window
                             }]
                         }]
                     },
