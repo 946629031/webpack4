@@ -1838,7 +1838,7 @@ webpack4 各种语法 入门讲解
                             // 由于 CleanWebpackPlugin 默认会认为，当前文件目录就是 根目录，所以要重写 根目录
                             
                             cleanOnceBeforeBuildPatterns: ['*.js', '!vendor', '!vendor.manifest.json']
-                            // 这个参数配置要删除那些文件，和不要删除那些文件。要删除的文件'*.js'，不删除的文件前价格!
+                            // 这个参数配置要删除那些文件，和不要删除那些文件。要删除的文件'*.js'，不删除的文件前加个!
                         })
                     ],
                     output: {
@@ -2443,3 +2443,259 @@ webpack4 各种语法 入门讲解
 
     - #### 如果希望, 根据入口不同，打包成不同的 css文件
         [【官网文档】如果希望, 根据入口不同，打包成不同的 css文件](https://webpack.js.org/plugins/mini-css-extract-plugin/#extracting-css-based-on-entry)
+
+- ### 4-10 Webpack 与浏览器缓存（Caching）
+    - 1.存在问题：
+        ```js
+        // index.js
+        import _ from 'lodash'
+        import $ from 'jquery'
+
+        const dom = $('<div>')
+        dom.html(_.join(['Dell','lee'],'----'))
+        $('body').append(dom)
+        ```
+        这时候打包，由于引入了 lodash 和 jquery 两个库，打包文件会超过 244kb，会警告。关闭警告方法：```module.exports.performance: false```
+        ```js
+        // webpack.config.js
+        const path = require('path')
+
+        module.exports = {
+            mode: 'production',
+            performance: false,  // 关闭 webpack 打包警告
+            entry: {
+                main: './src/index.js'
+            },
+            optimization: {
+                usedExports: true,
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        vendor: {
+                            test: /[\\/]node_modules[\\/]/,
+                            name: 'vendors'
+                        }
+                    }
+                }
+            },
+            output: {
+                filename: '[name].js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ````
+        
+    - 2.由上所示，打包的结果为：```main.js``` 和 ```vendors.js``` 两个文件
+        - 当你修改了业务代码，```main.js``` 后，重新打包并上传服务器
+        - 当浏览器第二次请求这两个文件，由于文件名还是 ```main.js``` 所以，浏览器会从本地缓存中读取 ```main.js```，而不会重新向服务器请求。这样的话，你后面修改的业务代码，就没有被及时的更新到用户端
+    - 3.```contentHash```
+        - ```contentHash``` 的特性：如果文件内容不变，contentHash 的值也不会改变
+        ```js
+        // webpack.config.js
+        const path = require('path')
+        const CleanWebpackPlugin = require('clean-webpack-plugin');
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'
+            },
+            optimization: {
+                runtimeChunk: 'single',  // mainfest 独立打包成一个文件：runtime.js
+                usedExports: true,
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        vendor: {
+                            test: /[\\/]node_modules[\\/]/,
+                            name: 'vendors'
+                        }
+                    }
+                }
+            },
+            plugins: [ new CleanWebpackPlugin({default: 'dist'}) ],
+            output: {
+                filename: '[name].[contenthash].js',  // 使用 contenthash 自动 hash命名
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ````
+    - 4.可能存在问题
+        - 在 webpack4 以前的旧版webpack中，即使使用了contenthash，在不改变代码，每次打包的 hash值 也可能不一样。
+        - 原因：```mainfest``` 记录着，文件和文件直接的关系。
+        - 在 webpack4 以前，```mainfest``` 既存在于业务代码中 ```main.js```，也存在于第三方库的打包代码中 ```vendors.js```
+        - 由于每次打包的 ```mainfest``` 有所不同，所以旧版本webpack，即使不改变代码，每次打包的 hash值 也不一样
+        - 解决方法：```module.exports.optimization.runtimeChunk: 'single'``` 将 mainfest 独立打包成一个文件即可
+
+        
+- ### 4-11 Shimming 垫片 的作用
+    - 1.来看一个问题
+        ```js
+        // index.js
+        import $ from 'jquery';
+        import _ from 'lodash';
+        import { ui } from './jquery.ui';
+
+        ui()
+
+        const dom = $('<div>')
+        dom.html(_.join(['dell','lee'], '---'))
+        $('body').append(dom)
+        ```
+        ```js
+        // jquery.ui.js
+        export function ui(){
+            $('body').css('background','red')   // 打包后执行，浏览器报错 $ is not defined
+        }
+        ```
+        - <span style='color:red'>**报错原因：**</span>
+            - webpack 是基于模块打包的，模块内的变量只能在模块内使用。
+            - 由于模块的独立性，模块与模块之间，不会有任何的耦合，如果出了问题 直接到对应的模块找问题就行了。
+        - 简单 又 笨的解决办法
+            ```js
+            // jquery.ui.js
+            import $ from 'jquery';     // 直接再引入，但是由于这是第三方库，不是你的业务代码，所以直接引入是不太现实的
+
+            export function ui(){
+                $('body').css('background','red')   // 打包后执行，浏览器报错 $ is not defined
+            }
+            ```
+    - 2.借助 Shimming 让jquery变成全局作用域
+        ```js
+        // webpack.config.js
+        const path = require('path')
+        const CleanWebpackPlugin = require('clean-webpack-plugin');
+        const HtmlWebpackPlugin = require('html-webpack-plugin');
+        const webpack = require('webpack')      // 第一步，引入webpack
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'
+            },
+            optimization: {
+                runtimeChunk: 'single',
+                usedExports: true,
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        vendor: {
+                            test: /[\\/]node_modules[\\/]/,
+                            name: 'vendors'
+                        }
+                    }
+                }
+            },
+            plugins: [ 
+                new CleanWebpackPlugin({default: 'dist'}),
+                new HtmlWebpackPlugin(),
+                new webpack.ProvidePlugin({     // 第二步，配置webpack.ProvidePlugin
+                    $: 'jquery',         // 如果发现模块中出现 '$' ，就会自动在模块中自动引入 'jquery'模块。相当于 " import $ from 'jquery' "
+                    _join: ['lodash','join']    //  将 lodash 模块中的 join ，定义为 _join
+                })
+            ],
+            output: {
+                filename: '[name].[contenthash].js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+        - 这样配置好后，```jquery.ui.js``` 里就不用再次 ```import $ from 'jquery'``` 了
+        
+        ```js
+        // index.js
+        import $ from 'jquery';
+        import _ from 'lodash';
+        import { ui } from './jquery.ui';
+
+        ui()
+
+        const dom = $('<div>')
+        dom.html(_.join(['dell','lee'], '---'))
+        $('body').append(dom)
+        ```
+        ```js
+        // jquery.ui.js
+        export function ui(){
+            $('body').css('background','red')   // 打包后执行，浏览器报错 $ is not defined
+            $('.main').css('background', _join(['green'], ''))  // 将 .main 背景色 通过lodash里的 join 设置为蓝色
+        }
+        ```
+    - 3.模块中的this指向
+        - 1.看一例子
+            ```js
+            // index.js
+            console.log(this)   // object，实际上模块中的 this 默认指向 模块它自身
+            console.log(this === window)   // false
+            ```
+        - 2.如果我现在就是想要 **每个js模块的 this 都指向 window** 该怎么办呢
+            - 1.借助 ```npm i -D imports-loader```
+            - 2.配置
+                ```js
+                // webpack.config.js
+                const path = require('path')
+                const CleanWebpackPlugin = require('clean-webpack-plugin');
+                const HtmlWebpackPlugin = require('html-webpack-plugin');
+                const webpack = require('webpack')
+
+                module.exports = {
+                    mode: 'development',
+                    entry: {
+                        main: './src/index.js'
+                    },
+                    module: {
+                        // rules: [{
+                        //     test: /\.js$/,
+                        //     exclude: /node_modules/,
+                        //     loader: 'babel-loader'   // 以前，我们遇到了js文件，都是使用 babel-loader 来处理
+                        // }]
+                        rules: [{
+                            test: /\.js$/,
+                            exclude: /node_modules/,
+                            use: [{
+                                loader: 'babel-loader',
+                                query: {    // query这里配置该loader的参数
+                                    presets: [[
+                                        "@babel/preset-env", {
+                                        targets: {
+                                            chrome: "67",
+                                        }
+                                    }]]
+                                },
+                            },{
+                                loader: 'imports-loader?this=>window'
+                            }]
+                        }]
+                    },
+                    optimization: {
+                        runtimeChunk: 'single',
+                        usedExports: true,
+                        splitChunks: {
+                            chunks: 'all',
+                            cacheGroups: {
+                                vendors: {
+                                    test: /[\\/]node_modules[\\/]/,
+                                    name: 'vendors'
+                                }
+                            }
+                        }
+                    },
+                    plugins: [ 
+                        new CleanWebpackPlugin({default: 'dist'}),
+                        new HtmlWebpackPlugin(),
+                        new webpack.ProvidePlugin({
+                            $: 'jquery'
+                        })
+                    ],
+                    output: {
+                        filename: '[name].[contenthash].js',
+                        path: path.resolve(__dirname, 'dist')
+                    }
+                }
+                ```
+            - 3.配置完后，在执行 ```index.js``` this 就指向 window 了
+                ```js
+                // index.js
+                console.log(this)   // window
+                console.log(this === window)   // true
+                ```
