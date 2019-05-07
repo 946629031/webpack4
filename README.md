@@ -34,6 +34,8 @@ webpack4 各种语法 入门讲解
     - [4-7 ```Lazy Loading``` 懒加载，```Chunk``` 是什么？](##4-7-lazy-loading-懒加载chunk-是什么)
     - [4-8 ```Bundle Analysis``` 打包分析，```Prefetching``` 预取，```Preloading``` 预加载](#4-8-bundle-analysis-打包分析prefetching-预取preloading-预加载)
     - [4-9 Css 文件的代码分割，打包独立的css文件](#4-9-css-文件的代码分割打包独立的css文件)
+    - [4-10 Webpack 与浏览器缓存（Caching）](#4-10-webpack-与浏览器缓存caching)
+    - [4-11 Shimming 垫片 的作用](#4-11-shimming-垫片-的作用)
 - [第5章](#)
 
 ----
@@ -1692,7 +1694,7 @@ webpack4 各种语法 入门讲解
             // package.json
             {
                 "scripts": {
-                    "dev"  : "webpack-dev-server --config webpack.dev.js",  // 开发环境
+                    "dev"  : "webpack-dev-server --config webpack.dev.js",  // 开发环境。为了高性能，打包内容存于内存中，不生成打包
                     "build": "webpack --config webpack.prod.js"   // 线上环境
                 }
             }
@@ -2701,3 +2703,193 @@ webpack4 各种语法 入门讲解
                 console.log(this)   // window
                 console.log(this === window)   // true
                 ```
+
+- ### 4-12 环境变量的使用方法
+    - #### 本节主要讲解知识点：
+        - 如何在webpack的打包过程中，去使用全局变量
+        - 在很多脚手架的工具里面，你会发现，有时候他会通过全局变量 env.prodcution 的值来决定 到底是 **打包生产环境**，还是 **打包开发环境**
+    - 1.先来看一个问题
+        - 在过去，我们是这样实现 [Development 和 Production 模式的区分打包](#3最佳配置开发环境生产环境) 的
+        ```js
+        // package.json
+        "scripts" : {
+            "dev-build" : "webpack --config ./build/webpack.dev.js",        // 开发打包
+            "dev" : "webpack-dev-server --config ./build/webpack.dev.js",   // 开发环境
+            "build" : "webpack --config ./build/webpack.prod.js"            // 线上环境
+        }
+        ```
+        - 之前，我们是借助两个配置文件实现打包的，分别是 ```webpack.dev.js``` ```webpack.prod.js```
+        - 那么有没有另一种方法，也可以实现这种功能呢？
+    - 2.另一种区分打包方法
+        ```js
+        // webpack.prod.js
+        // const merge = require('webpack-merge')               // 第一步
+        // const commonConfig = require('./webpack.common.js')  // 第一步
+
+        const prodConfig = {
+            mode: "production",
+            devtool: "cheap-module-source-map"
+        }
+
+        // module.exports = merge(commonConfig, prodConfig)     // 第二步
+        module.exports = prodConfig                             // 第二步
+        ```
+        ```js
+        // webpack.dev.js
+        const webpack = require('webpack')
+        // const merge = require('webpack-merge')               // 第一步
+        // const commonConfig = require('./webpack.common.js')  // 第一步
+
+        const devConfig = {
+            mode: 'development',
+            devtool: 'cheap-module-eval-source-map',
+            devServer: {
+                contentBase: './dist',
+                open: true,
+                port: 8080,
+                hot: true
+            },
+            plugins: [
+                new webpack.HotModuleReplacementPlugin()
+            ],
+            optimization: {
+                usedExports: true
+            }
+        }
+
+        // module.exports = merge(commonConfig, devConfig)      // 第二步
+        module.exports = devConfig                              // 第二步
+        ```
+        ```js
+        // webpack.common.js
+        const path = require('path')
+        const HtmlWebpackPlugin = require('html-webpack-plugin')
+        const CleanWebpackPlugin = require('clean-webpack-plugin')
+        
+        const merge = require('webpack-merge')              // 第一步
+        const devConfig = require('./webpack.dev.js')       // 第一步
+        const prodConfig = require('./webpack.prod.js')     // 第一步
+
+        // module.exports = {           // 第二步
+        const commonConfig = {          // 第二步
+            entry: {
+                main: './src/index.js'
+            },
+            module: {
+                rules: [{
+                    test: /\.js$/,
+                    exclude: /node_modules/,
+                    loader: 'babel-loader',
+                    options: {
+                        presets: [[
+                            "@babel/preset-env", {
+                            targets: {
+                                edge: "17",
+                                firefox: "60",
+                                chrome: "67",
+                                safari: "11.1",
+                            },
+                            useBuiltIns: 'usage'
+                        }]]
+                    }
+                },{
+                    test: /\.(jpg|png|gif)$/,
+                    use: {
+                        loader: 'url-loader',
+                        options: {
+                            name: '[name].[hash].[ext]',
+                            outputPath: 'images/',
+                            limit: 10240
+                        }
+                    }
+                },{
+                    test: /\.(eot|ttf|svg)$/,
+                    use: {
+                        loader: 'file-loader'
+                    }
+                },{
+                    test: /\.scss$/,
+                    use: [
+                        'style-loader',
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                importLoaders: 2
+                            }
+                        },
+                        'sass-loader',
+                        'postcss-loader'
+                    ]
+                },{
+                    test: /\.css$/,
+                    use: [
+                        'style-loader',
+                        'css-loader',
+                        'postcss-loader'
+                    ]
+                }]
+            },
+            plugins: [
+                new HtmlWebpackPlugin({
+                    template: 'src/index.html'
+                }),
+                new CleanWebpackPlugin({
+                    default: ['dist'],
+                    root: path.resolve(__dirname, '../'),
+                    // 由于 CleanWebpackPlugin 默认会认为，当前文件目录就是 根目录，所以要重写 根目录
+                    
+                    cleanOnceBeforeBuildPatterns: ['*.js', '!vendor', '!vendor.manifest.json']
+                    // 这个参数配置要删除那些文件，和不要删除那些文件。要删除的文件'*.js'，不删除的文件前加个!
+                })
+            ],
+            output: {
+                filename: '[name].js',
+                path: path.resolve(__dirname, '../dist')
+            }
+        }
+
+        module.exports = (env) => {            // 第三步，导出一个函数
+            if(env && env.production){
+                return merge(commonConfig, prodConfig)   // 导出线上环境
+            }else{
+                return merge(commonConfig, devConfig)    // 导出生产环境
+            }
+        }
+        // 如果外部传递给我 env变量，且env存在，env.production也存在，那么就是 线上环境。否则就是 开发环境
+        // 这个模块到底是 导出线上环境，还是 导出生产环境，取决于你传递给他什么样的 env 变量
+        ```
+        ```js
+        // package.json
+        "scripts" : {
+            // "dev-build" : "webpack --config ./build/webpack.dev.js",
+               "dev-build" : "webpack --config ./build/webpack.common.js",
+            // "dev" : "webpack-dev-server --config ./build/webpack.dev.js",
+               "dev" : "webpack-dev-server --config ./build/webpack.common.js",
+            // "build" : "webpack --config ./build/webpack.prod.js"
+               "build" : "webpack --env.production --config ./build/webpack.common.js"
+            // --env.production 在这里加这个的意思是：我通过全局变量，向webpack配置文件里传递一个属性，它的值默认就是true
+        }
+        ```
+        - 题外话：也可以这么传值
+            - 1.传值方法1
+                - ```"build" : "webpack --env production --config ./build/webpack.common.js"```
+                - ```js
+                    module.exports = (production) => {            // 改成接收 production
+                        if(production){
+                            return merge(commonConfig, prodConfig)   // 导出线上环境
+                        }else{
+                            return merge(commonConfig, devConfig)    // 导出生产环境
+                        }
+                    }
+                  ```
+            - 2.传值方法2
+                - ```"build" : "webpack --env.production=abc --config ./build/webpack.common.js"```
+                - ```js
+                    module.exports = (production) => {            // 改成接收 production
+                        if(env && env.production === 'abc'){
+                            return merge(commonConfig, prodConfig)   // 导出线上环境
+                        }else{
+                            return merge(commonConfig, devConfig)    // 导出生产环境
+                        }
+                    }
+                  ```
