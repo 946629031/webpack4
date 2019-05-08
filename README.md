@@ -36,7 +36,9 @@ webpack4 各种语法 入门讲解
     - [4-9 Css 文件的代码分割，打包独立的css文件](#4-9-css-文件的代码分割打包独立的css文件)
     - [4-10 Webpack 与浏览器缓存（Caching）](#4-10-webpack-与浏览器缓存caching)
     - [4-11 Shimming 垫片 的作用](#4-11-shimming-垫片-的作用)
-- [第5章](#)
+    - [4-12 环境变量的使用方法](#4-12-环境变量的使用方法)
+- [第5章 Webpack 实战配置案例讲解](#)
+    - [5-1 Library 的打包]()
 
 ----
 
@@ -2867,7 +2869,7 @@ webpack4 各种语法 入门讲解
                "dev" : "webpack-dev-server --config ./build/webpack.common.js",
             // "build" : "webpack --config ./build/webpack.prod.js"
                "build" : "webpack --env.production --config ./build/webpack.common.js"
-            // --env.production 在这里加这个的意思是：我通过全局变量，向webpack配置文件里传递一个属性，它的值默认就是true
+            // --env.production 在这里加这个的意思是：我通过全局变量，向webpack配置文件里传递一个属性production，它的值默认就是true
         }
         ```
         - 题外话：也可以这么传值
@@ -2885,7 +2887,7 @@ webpack4 各种语法 入门讲解
             - 2.传值方法2
                 - ```"build" : "webpack --env.production=abc --config ./build/webpack.common.js"```
                 - ```js
-                    module.exports = (production) => {            // 改成接收 production
+                    module.exports = (production) => {            // 改成判断 production是否等于 abc
                         if(env && env.production === 'abc'){
                             return merge(commonConfig, prodConfig)   // 导出线上环境
                         }else{
@@ -2893,3 +2895,86 @@ webpack4 各种语法 入门讲解
                         }
                     }
                   ```
+
+## 第5章 Webpack 实战配置案例讲解
+- ### 5-1 Library 的打包，自己开发一个库
+    之前的讲解，都是对业务代码的打包，那么如果我们现在要开发一个库，该怎么办呢？
+    - 1.自己开发一个库
+        ```
+        // 目录结构
+        Library
+            |- /src
+                |- math.js
+                |- index.js  公共入口文件
+                |- string.js
+            |- package.json
+        ```
+        ```js
+        // math.js
+        export function add(a,b){
+            return a + b
+        }
+        export function minus(a,b){
+            return a - b
+        }
+        export function multiply(a,b){
+            return a * b
+        }
+        export function division(a,b){
+            return a / b
+        }
+        ```
+        ```js
+        // string.js
+        export function join(a,b){
+            return a + " " + b
+        }
+        ```
+        ```js
+        // index.js  公共入口文件
+        import * as math from './math'
+        import * as string from './string'
+
+        export default { math, string }
+        ```
+        - 我们新建的库，提供了 加减乘除 和 字符串拼接 的方法
+        - 到这里，我们流程跟打包业务代码差不多
+        - 但是，index.js 如果直接给浏览器执行的话，浏览器是执行不了的，所以我们还是需要对其进行打包
+        ```js
+        // package.json
+        "script": {
+            "build": "webpack"
+        }
+        ```
+        ```js
+        // webpack.config.js
+        const path = require('paht')
+
+        module.exports = {
+            mode: 'production',
+            entry: './src/index.js',
+            output: {
+                path: path.resolve(__dirname, 'dist'),
+                filename: 'library.js',
+                library: 'library',    // 支持<script src='xxx'>的引入方式，定义名为 'library' 的全局变量
+                libraryTarget: 'umd'   // 支持 CommonJS、AMD、import 三种引入方式
+                // libraryTarget 可选参数 window(浏览器环境下)、global(node环境下)
+            }
+        }
+        ```
+        ```js
+        // 这个库要给别人用的，那么别人一般会怎么用这个库呢？
+        import library from 'library'           // ES Module 引入
+
+        const library = require('library')      // CommonJS 模块引入
+
+        require(['library'], function(){})      // AMD 引入
+
+        // 外部引入我们的库，可以有多种方法，所以我们要在 webpack.config.js 配置好，以支持多种引入方式。libraryTarget: 'umd'
+
+        <script src='library.js'></script>
+        library.math
+        // 我们还希望能通过标签引入，并且引入后能直接使用 library. 的方式去调用里面的函数。
+        // library: 'library', 把打包结果，挂载到全局变量 library 上，可以library. 的方式去调用里面的函数。
+        // 在浏览器 console 面板，输入 'library' 即可测试是否存在该全局变量
+        ```
