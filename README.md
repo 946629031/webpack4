@@ -2978,3 +2978,98 @@ webpack4 各种语法 入门讲解
         // library: 'library', 把打包结果，挂载到全局变量 library 上，可以library. 的方式去调用里面的函数。
         // 在浏览器 console 面板，输入 'library' 即可测试是否存在该全局变量
         ```
+    - 2.使用其他库的函数
+        - 1.在上面的案例中，我们的 ```string.js``` 文件中，字符串方法是自己写的
+            ```js
+            // string.js
+            export function join(a,b){
+                return a + " " + b
+            }
+            ```
+        - 2.那我突然发现，lodash.js库 中有一个功能很好，所以我希望在我自己开发的这个库中使用部分lodash 的功能
+            ```js
+            // string.js
+            import _ form 'lodash'              // 引入 lodash
+
+            export function join(a,b){
+                return _.join([a, b], ' ');     // 使用 lodash.join 方法
+            }
+            ```
+            - 这样的话，我们就把之前的 ```string.js``` 改写成了现在这样，并且使用了 lodash.js库 中的方法
+        - 3.但是，在打包后发现，打包的结果 ```library.js``` 文件变成了 70.8Kb , 之前没引用 lodash 时只有 1.5kb ， 因为我的库中引入的 lodash库
+            - 别人在使用的时候，可能是这样
+                ```js
+                import _ from 'lodash'
+                import library from 'library'
+                ```
+            - 这样就会出现问题
+                - 1.我们自己开发的库 library 里已经把 lodash 打包进去了
+                - 2.别人在写业务代码的时候，也可能使用 lodash
+                - 3.这样的话，lodash 就被重复打包了，浪费性能
+            - 解决办法
+                ```js
+                // webpack.config.js
+                const path = require('paht')
+
+                module.exports = {
+                    mode: 'production',
+                    entry: './src/index.js',
+                    externals: ['lodash'],  // 打包过程中，如果遇到 lodash，就忽略它，不要把它打包进去
+                    output: {
+                        path: path.resolve(__dirname, 'dist'),
+                        filename: 'library.js',
+                        library: 'library',
+                        libraryTarget: 'umd'
+                    }
+                }
+                ```
+                - 这时候，再打包 ```library.js``` 文件就又变回了 1.5Kb
+                - 但是，假如别人引用我这个 ```library.js```库 的时候，如果是这样
+                    ```js
+                    import library from 'library'   // 仅仅这样，是无法使用的，因为 library 依赖于 lodash
+                    ```
+                - 所以，别人在用 ```library.js```库 的时候，应该
+                    ```js
+                    import _ from 'lodash'
+                    import library from 'library'
+                    ```
+            - [externals 的具体使用方法参照 webpack官网](https://webpack.js.org/configuration/externals)
+                ```js
+                // webpack.config.js
+                module.exports = {
+
+                    externals : {
+                        lodash : {
+                            commonjs: 'lodash',     // const lodash = require('lodash')
+                            amd: 'lodash',
+                            root: '_'               // 通过 script 标签引入的全局变量, 变量名为 '_'
+
+                            // key的值为变量名，
+                            // 如 commonjs: 'lodash'
+                            // 则必须为 const lodash = require('lodash')
+                            // 而不能   const _ = require('lodash')
+                        }
+                    },
+
+                    // 或者
+
+                    externals : {
+                        subtract : {
+                            root: ['math', 'subtract']
+                        }
+                    }
+                };
+                ```
+        - 4.上线发布到 npm 官方库中
+            - 1.配置入口文件
+                ```js
+                // package.json
+                {
+                    "name": "library",              // 给你的库命名，但是不要与npm已有库重名
+                    "main": "./dist/library.js"     // 这里入口文件，要改成我们要给别人使用的 library.js
+                }
+                ```
+            - 2.到 npm 官网注册一个账号
+            - 3.命令行执行 ```npm adduser```，添加用户名和密码
+            - 4.```npm publish``` 把你的这个项目发布到 npm 官方仓库里去
+            - 5.发布成功后，别人要使用就 ```npm i 你的仓库名```
