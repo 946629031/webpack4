@@ -39,6 +39,7 @@ webpack4 各种语法 入门讲解
     - [4-12 环境变量的使用方法](#4-12-环境变量的使用方法)
 - [第5章 Webpack 实战配置案例讲解](#)
     - [5-1 Library 的打包]()
+    - [5-2 PWA 的打包配置 (服务器挂掉依然能访问)]()
 
 ----
 
@@ -3060,7 +3061,7 @@ webpack4 各种语法 入门讲解
                     }
                 };
                 ```
-        - 4.上线发布到 npm 官方库中
+        - 4.上线，发布到 npm 官方库中
             - 1.配置入口文件
                 ```js
                 // package.json
@@ -3073,3 +3074,71 @@ webpack4 各种语法 入门讲解
             - 3.命令行执行 ```npm adduser```，添加用户名和密码
             - 4.```npm publish``` 把你的这个项目发布到 npm 官方仓库里去
             - 5.发布成功后，别人要使用就 ```npm i 你的仓库名```
+- ### 5-2 PWA 的打包配置 (服务器挂掉依然能访问)
+    - 1.利用 ```http-server``` 搭建本地服务器
+        - 1.安装 ```npm i -D http-server``` 
+        - 2.配置
+            ```js
+            // package.json
+            "scripts":{
+                "start": "http-server dist"     // 把当前目录下的 dist 目录作为跟文件夹，启动服务器
+            }
+            ```
+        - 3.启动服务 ```npm run start```
+        - 4.访问 localhost:8080 即可
+    - 2.但是如果这时候，我把服务器关掉，我在访问 localhost:8080，就会提示 “无法访问此网站” 了
+    - #### 3.```PWA``` 是什么？
+        - PWA 全称 ```Progressive Web Application```
+        - 1.你访问一个网站，第一次访问成功了
+        - 2.如果服务器挂掉了
+        - 3.你第二次再访问这个网站的时候，他在你本地有一份缓存，PWA可以利用这份缓存，把你之前的页面再展示出来。
+        - 4.这样的话，即便服务器挂掉了，我依然能看到之前的页面，提升用户体验。
+    - 4.如何使用 ```PWA```
+        - 1.安装 ```npm i -D workbox-webpack-plugin```
+        - 2.配置
+            ```js
+            // webpack.config.js
+            const path = require('path')
+            const HtmlWebpackPlugin = require('html-webpack-plugin')
+            const CleanWebpackPlugin = require('clean-webpack-plugin')
+            const WorkboxPlugin = require('workbox-webpack-plugin')     // step 1
+
+            module.exports = {
+                entry: {
+                    main: './src/index.js'
+                },
+                plugins: [
+                    new CleanWebpackPlugin(),
+                    new HtmlWebpackPlugin(),
+                    new WorkboxPlugin.GenerateSW({      // Step 2.   ServiceWorkers
+                        clientsClaim: true,
+                        skipWaiting: true
+                    })
+                ],
+                output: {
+                    filename: '[name].bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+        - 3.执行打包
+            - 1.打包成功后，dist 目录下会生成两个文件
+                - 1.service-worker.js        (该文件可以理解成另类的缓存)
+                - 2.precache-manifest.js
+            - 2.通过这两个文件，就可以实现 PWA 的功能
+        - 4.业务代码支持
+            - 由于仅靠前三步，还不能完全实现 PWA 的功能，所以业务代码也要支持才行
+            ```js
+            // index.js
+            if('serviceWorker' in navigator){   // 如果你的浏览器支持 serviceWorker 
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {  // 如果注册成功
+                        console.log('SW registered: ', registration)
+                    }).catch(registrationError => {   // 如果注册失败
+                        console.log('SW registration failed: ', registrationError)
+                    })
+                })
+            }
+            ```
+        - 5.再执行打包，然后 ```npm run start``` 启动本地服务器测试即可
