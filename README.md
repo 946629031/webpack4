@@ -3142,3 +3142,138 @@ webpack4 各种语法 入门讲解
             }
             ```
         - 5.再执行打包，然后 ```npm run start``` 启动本地服务器测试即可
+
+- ### 5-3 TypeScript 的打包配置
+    - 1.什么是 ```TypeScript``` ?
+        - 1.由于不同人写 JS 的方式不同，对于同一个功能的 JS 写法，有N种写法
+        - 2.如果是团队开发，每个人又都按照自己的写法来写代码，那么**代码的可维护性**就会难以得到保证
+        - 3.TypeScript 是微软出品，规范了一套 JavaScript 的语法。支持原生JS，而且是JS的超集。
+        - 4.TypeScript 最大的优势就是规范代码 可维护性高，而且能 智能提示 报错，拥有良好的开发体验。
+    - 2.TypeScript 的打包配置
+        - 1.安装 ```npm i -D ts-loader typescript```
+        - 2.配置
+            ```
+            // 项目目录
+            type-script-demo
+                |- /src
+                    |- index.tsx
+                |- package.json
+                |- webpack.config.js
+                |- tsconfig.json        // 没配置这个文件的时候，打包会报错
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'production',
+                entry: './src/index.tsx',
+                module: {
+                    rules: [{
+                        test: /\.tsx?$/,
+                        use: 'ts-loader',
+                        exclude: /node_modules/
+                    }]
+                }
+                output: {
+                    filename: '[name].bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            ```js
+            // tsconfig.js
+            {
+                "compilerOptions": {
+                    "outDir": "./dist",     // 把输出文件放在 dist 目录下
+                    "module": "es6",        // 在 TypeScript 文件里，引入模块方式为 ES6 中 import 方法引入
+                    "target": "es5",        // 编译目标为 es5 ，使其适用于大多数浏览器
+                    "allowJs": true         // 允许你在 TypeScript 内引入 js 模块
+                }
+            }
+            ```
+            ```tsx
+            // index.tsx    TypeScript 的业务代码
+            class Greeter {
+                greeting: string;
+                construtor(message: string){
+                    this.greeting = message;
+                }
+                greet(){
+                    return "Hello, " + this.greeting;
+                }
+            }
+
+            let greeter = new Greeter("world");
+
+            let button = document.createElement('botton');
+            button.textContent = "Say Hello";
+            button.onclick = funciton(){
+                alert(greeter.greet());
+            }
+
+            document.body.appendChild(button)
+            ```
+        - 3.配置完后，执行打包，就能正确打包出 main.bundle.js 了
+    - 3.TypeScript 其他库的提示问题
+        - 1.存在的问题
+            - 1.默认情况下，TypeScript 是有智能提示的，如果写错了会有红色下划线
+            - 2.但是，如果我们业务代码中使用了 lodash，默认是没有 lodash 错误提示的，如
+                ```tsx
+                // index.tsx
+                import _ from 'lodash.js';
+
+                class Greeter {
+                    greeting: string;
+                    construtor(message: string){
+                        this.greeting = message;
+                    }
+                    greet(){
+                        return "Hello, " + this.greeting;
+                    }
+                }
+
+                alert( _.join());   // 如这里，我这里 _.join 什么都不传，并没有提示我缺少参数
+                let greeter = new Greeter("world");
+
+                let button = document.createElement('botton');
+                button.textContent = "Say Hello";
+                button.onclick = funciton(){
+                    alert(greeter.greet());
+                }
+
+                document.body.appendChild(button)
+                ```
+         - 2.安装提示模块
+            - 1.安装 
+                - ```npm i -D @types/lodash```  lodash 的 TypeScript 提示工具
+                - ```npm i -D @types/jquery```  jquery 的 TypeScript 提示工具
+                - [TypeSearch](https://microsoft.github.io/TypeSearch/) 到这个网站搜索，只要能搜得到的，都可以安装
+                    - 另外 Typings , 是 TypeScript 1.x 版本时候的提示工具，将来要被废除的。
+            - 2.使用
+                ```tsx
+                // index.tsx
+                // import _ from 'lodash.js';   // 在 typescript 里，这样引入是有问题的
+                import * as _ from 'lodash.js';
+
+                class Greeter {
+                    greeting: string;
+                    construtor(message: string){
+                        this.greeting = message;
+                    }
+                    greet(){
+                        return "Hello, " + this.greeting;
+                    }
+                }
+
+                alert( _.join());   // 安装好后，现在这里就会提示错误了
+                let greeter = new Greeter("world");
+
+                let button = document.createElement('botton');
+                button.textContent = "Say Hello";
+                button.onclick = funciton(){
+                    alert(greeter.greet());
+                }
+
+                document.body.appendChild(button)
+                ```
