@@ -781,7 +781,7 @@ webpack4 各种语法 入门讲解
             }
             ```
         - 生产环境
-            - 生成环境中，可以不用 ```devtool```，或者配置如下
+            - 生产环境中，可以不用 ```devtool```，或者配置如下
             ```js
             // webpack.config.js
             module.exports = {
@@ -831,6 +831,7 @@ webpack4 各种语法 入门讲解
                 - 存在的问题：
                     - 而且 ```cheap-``` 只映射 **业务代码** (即entry的入口文件) 的映射关系，不会去管其它的模块错误。
                 - 当 ```devtool: 'cheap-module-source-map'``` 时，这时候的映射关系不仅映射 **业务代码** ，还映射业务代码引入的其他 文件或模块 ，或第三方 module 的错误。
+                - ```.map``` 文件被独立出来，不跟业务文件 index.js 合并在一起，用户访问时，仅加载业务文件，与 映射关系与业务文件合并的 相比，性能更好。
             - ```eval```
                 - 当 ```devtool: 'eval'``` 时
                     - ```eval``` 是打包速度最快的一种方式，也能映射报错位置。
@@ -969,7 +970,7 @@ webpack4 各种语法 入门讲解
     - 1.css热更新
         - 以前存在的问题：
             - 之前执行 ```webpack-dev-server``` 的时候，自动监听 src目录，当监听到文件修改的时候，就会自动打包并刷新页面。
-            - 但是有时候我们会觉得挺麻烦的，例如：给button绑定事件，每点击一次，新增一个div，当我们修改该div的css，浏览器就会自动刷新了，导致每修改一次css，都需要重新点击button，听麻烦的...
+            - 但是有时候我们会觉得挺麻烦的，例如：给button绑定事件，每点击一次，新增一个div。当我们修改该div的css，浏览器就会自动刷新了，导致每修改一次css，都需要重新点击button，挺麻烦的...
             - 那么如何才能只修改css，不重载 document 呢？用下面的 ```Hot Module Replacement``` 模块热更新
         - 配置
             1. ```devServer``` 开启 hot 和 hotOnly
@@ -3142,6 +3143,9 @@ webpack4 各种语法 入门讲解
             }
             ```
         - 5.再执行打包，然后 ```npm run start``` 启动本地服务器测试即可
+    - 5.Chrome 控制台里的 Service Worker
+        - 路径：Chrome -> 控制台 -> Application -> 左侧找到 Service Worker
+        - 如果想关闭 Service Worker，在右侧找到并点击 Unregister 即可
 
 - ### 5-3 TypeScript 的打包配置
     - 1.什么是 ```TypeScript``` ?
@@ -3277,3 +3281,370 @@ webpack4 各种语法 入门讲解
 
                 document.body.appendChild(button)
                 ```
+
+- ### 5-4 使用 WebpackDevServer 实现请求转发
+    - 1.我们先来看一个项目
+        ```
+        // 项目目录
+        5-4_WebpackDevServer
+            |- /node_modules
+            |- /src
+                |- index.html
+                |- index.js
+            |- .babelrc
+            |- package.json
+            |- webpack.config.js
+        ```
+        ```js
+        // index.js
+
+        // import "@babel/polyfill"
+        import React, {Component} from 'react'
+        import ReactDom from 'react-dom'
+
+        class App extends Component {
+
+            render(){
+                return <div>Hello world</div>
+            }
+        }
+
+        ReactDom.render(<App />, document.getElementById('root'))
+        ```
+        ```html
+        // index.html
+        <body id="root"> </body>
+        ```
+        ```js
+        // webpack.config.js
+        const path = require('path')
+        const HtmlWebpackPlugin = require('html-webpack-plugin')
+        const CleanWebpackPlugin = require('clean-webpack-plugin')
+        const webpack = require('webpack')
+
+        module.exports = {
+            // mode: 'development',
+            // devtool: 'cheap-module-eval-source-map',
+            mode: 'production',
+            devtool: 'cheap-module-source-map',
+            entry: './src/index.js',
+            devServer: {
+                contentBase: './dist',
+                open: true,
+                port: 8080,
+                hot: true,
+                hotOnly: true
+            },
+            module:{
+                rules: [{
+                    test: /\.js$/,
+                    exclude: /node_modules/,
+                    loader: 'babel-loader'
+                },{
+                    test: /\.(jpg|png|gif)$/,
+                    use: {
+                        loader: 'url-loader',
+                        options: {
+                            name: '[name].[hash].[ext]',
+                            outputPath: 'img/',
+                            limit: 10240
+                        }
+                    }
+                },{
+                    test: /\.(eot|ttf|svg)$/,
+                    use: 'file-loader'
+                },{
+                    test: /\.s?css$/,
+                    use: [
+                        'style-loader',
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                importLoader: 2
+                            }
+                        },
+                        'sass-loader',
+                        'postcss-loader'
+                    ]
+                }]
+            },
+            plugins:[
+                new HtmlWebpackPlugin({
+                    template: 'src/index.html'
+                }),
+                new CleanWebpackPlugin(),
+                new webpack.HotModuleReplacementPlugin()
+            ],
+            output: {
+                filename: '[name].bundle.js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+        ```js
+        // .babelrc
+        {
+            "presets": [
+                [
+                    "@babel/preset-env", {
+                        "targets": {
+                            "chrome": "67"
+                        },
+                        "useBuiltIns": "usage",
+                        "corejs": "3"
+                    }
+                ],
+                "@babel/preset-react"
+            ]
+        }
+        ```
+        ```js
+        // package.json
+        {
+            "name": "5-4_WebpackDevServer",
+            "version": "1.0.0",
+            "description": "",
+            "main": "index.js",
+            "scripts": {
+                "build": "webpack",
+                "start": "webpack-dev-server"
+            },
+            "keywords": [],
+            "author": "",
+            "license": "ISC",
+            "devDependencies": {
+                "@babel/core": "^7.4.4",
+                "@babel/polyfill": "^7.4.4",
+                "@babel/preset-env": "^7.4.4",
+                "@babel/preset-react": "^7.0.0",
+                "axios": "^0.18.0",
+                "babel-loader": "^8.0.5",
+                "clean-webpack-plugin": "^2.0.2",
+                "css-loader": "^2.1.1",
+                "file-loader": "^3.0.1",
+                "html-webpack-plugin": "^3.2.0",
+                "node-sass": "^4.12.0",
+                "sass-loader": "^7.1.0",
+                "style-loader": "^0.23.1",
+                "url-loader": "^1.1.2",
+                "webpack": "^4.31.0",
+                "webpack-cli": "^3.3.2",
+                "webpack-dev-server": "^3.3.1"
+            },
+            "dependencies": {
+                "react": "^16.8.6",
+                "react-dom": "^16.8.6"
+            }
+        }
+        ```
+    - 2.当上面的项目能正常执行之后，我们下一步来 **使用 WebpackDevServer 实现请求转发**
+        - 1.借助工具 ```npm i -D axios```
+        - 2.业务代码添加 异步请求逻辑
+            ```js
+            // index.js
+
+            // import "@babel/polyfill"
+            import React, {Component} from 'react'
+            import ReactDom from 'react-dom'
+            import axios from 'axios'           // 第一步
+
+            class App extends Component {
+
+                // 第二步 添加 异步请求逻辑
+                componentDidMount(){    // 当 render() 函数执行完后，就会执行这里
+                    axios.get('http://www.dell-lee.com/react/api/header.json')
+                        .then((res) => {
+                            console.log(res)
+                        })
+                }
+
+                render(){
+                    return <div>Hello world</div>
+                }
+            }
+
+            ReactDom.render(<App />, document.getElementById('root'))
+            ```
+        - 3.存在的问题
+            - 实际上，在开发的时候，我们的前端代码 有可能是在开发环境中运行的，也有可能在线上环境中运行的
+            - 开发环境请求的接口，跟线上环境请求的接口，有可能是不一样的。
+            - 比如说，我前后端在开发联调的过程中，我现在请求的接口 可能是一台 **测试服务器**。
+            - 而，当我上线了以后，我请求的则是 **线上服务器**
+            <br><br><br>
+            - 所以，你在上面 第二步中 ```axios.get('http://www.dell-lee.com/react/api/header.json')```
+            - 如果直接写死 ```http://www.dell-lee.com``` ，那么你永远都是请求线上的服务器，就会有问题
+            <br><br><br>
+            - 所以一般来说，我们在做 AJAX 请求，不会用这种 **绝对路径** 的形式，而是用 **相对路径**，如
+            - ```axios.get('/react/api/header.json')```
+            <br><br><br>
+            - 但是，这样又带来一个新的问题
+                - 执行代码后，浏览器会报错：```localhost:8080/react/api/header.json' 404 Not Found ```
+            <br><br><br>
+            - 在以前，我们可以借助 ```charles``` 和 ```fiddler``` 搭建 **本地代理服务器**，然后通过这个服务将我们的请求再进行转发
+            <br><br><br>
+            - 但是，我们现在有更简单的方式：```WebpackDevServer```
+    - #### 3.借助 WebpackDevServer 里的 devServer.proxy 实现请求转发
+        - <span style="color:red">【注意】</span>只有在开发环境下，<span style="color:red;font-weight:bold">devServer</span> 里面的配置才有效，如果上线了，里面的配置就无效了。
+        - 1.[WebpackDevServer 里的 devServer.proxy 官方文档api](https://webpack.js.org/configuration/dev-server/#devserverproxy)
+        - 2.请求转发 的 原理思路：
+            - 当我请求 /react/api/header.json 的时候
+            - 你帮我转发请求到 http://www.dell-lee.com/react/api/header.json 把数据取回来给我
+        - 3.```devServer.proxy``` 的使用
+            ```js
+            // webpack.config.js
+            module.exports = {
+                // ...
+                devServer: {
+                    proxy: {    // 添加 devServer.proxy 的配置即可
+                        '/react/api': 'http://www.dell-lee.com',
+                        // 当我请求 '/react/api' 的时候，你都帮我转发到 'http://www.dell-lee.com'
+                    }
+                }
+            }
+            ```
+        - 4.测试接口转发
+            - 1.在开发过程中，我们有时还会遇到这种问题
+                - 1.后端说，'http://www.dell-lee.com/react/api/header.json' 这个接口还暂时不能使用
+                - 2.你先用 **测试接口** http://www.dell-lee.com/react/api/demo.json
+                <br><br>
+                - 3.<span style="color:red;font-weight:bold">但是</span>，如果你直接把原来的 ```axios.get('/react/api/header.json')```
+                - 4.改成 ```axios.get('/react/api/demo.json')```, 就又会产生一个问题：
+                    - 这样，一来麻烦，上线前又得重新修改接口
+                    - 而且，很有可能会有遗漏
+                    - 所以，一般来说 都不建议直接改成测试接口
+            - 2.使用方法
+                ```js
+                // webpack.config.js
+                module.exports = {
+                    // ...
+                    devServer: {
+                        proxy: {
+                            '/react/api': {
+                                target: 'http://www.dell-lee.com',
+                                pathRewrite: {
+                                    'header.json': 'demo.json'
+                                }
+                            }
+                        }
+                        // 意思是：在开发模式下，如果请求 '/react/api'，他会帮你去 'http://www.dell-lee.com' 取数据。
+                        // 但是，其中如果你要拿 'header.json' 的时候 会帮你取 'demo.json' 的数据。
+                    }
+                }
+                ```
+    - 4.```devServer.proxy``` 的其它配置参数
+        - 1.```https```的转发
+            ```js
+            // webpack.config.js
+            module.exports = {
+                // ...
+                devServer: {
+                    proxy: {
+                        '/react/api': {
+                            target: 'https://www.dell-lee.com', // 如果是 https 的地址
+                            secure: false,  // 需要这项配置
+                            pathRewrite: {
+                                'header.json': 'demo.json'
+                            }
+                        }
+                    }
+                }
+            }
+            ```
+        - 2.已某某开头的
+            ```js
+            // webpack.config.js
+            module.exports = {
+                //...
+                devServer: {
+                    proxy: {
+                    '/api': {
+                        target: 'http://www.dell-lee.com',
+                        pathRewrite: {'^/api' : ''}         // 以 '/api' 开头的，^ 尖括号相当于正则
+                        }
+                    }
+                }
+            };
+            ```
+        - 3.请求拦截
+            ```js
+            // webpack.config.js
+            module.exports = {
+                //...
+                devServer: {
+                    proxy: {
+                    '/api': {
+                        target: 'http://www.dell-lee.com',
+                        bypass: function(req, res, proxyOptions) {
+                            if (req.headers.accept.indexOf('html') !== -1) {
+                                console.log('Skipping proxy for browser request.');
+                                return '/index.html';
+                                // return false;    如果是 false 则表示：如果请求 html, 就直接跳过，什么也不做
+                            }
+                        }
+                        // 意思是：如果你请求的是 html 的内容，我就直接给你返回 '/index.html' 文件
+                    }
+                }
+            };
+            ```
+        - 4.多个路径的请求转发
+            ```js
+            // webpack.config.js
+            module.exports = {
+                //...
+                devServer: {
+                    proxy: [{
+                        context: ['/auth', '/api'],
+                        target: 'http://localhost:3000',
+                    }]
+                }
+            };
+            ```
+        - 5.根目录的请求转发
+            - 存在的问题
+                ```js
+                // webpack.config.js
+                module.exports = {
+                    // ...
+                    devServer: {
+                        proxy: {
+                            '/': {    
+                                // 默认情况下，直接对 根目录 进行代理转发是不行的。
+                                // 所以需要把根目录写成 false 或者 空，如 index: ''
+                                target: 'http://www.dell-lee.com'
+                            }
+                        }
+                    }
+                }
+                ```
+            - 解决方法
+                ```js
+                // webpack.config.js
+                module.exports = {
+                    //...
+                    devServer: {
+                        index: '', // specify to enable root proxying
+                        host: '...',
+                        contentBase: '...',
+                        proxy: {
+                            context: () => true,
+                            target: 'http://localhost:1234'
+                        }
+                    }
+                };
+                ```
+        - 6.有些网站对 Origin 做了限制，防止爬虫去爬他们的内容
+            ```js
+            // webpack.config.js
+            module.exports = {
+                //...
+                devServer: {
+                    proxy: {
+                        '/api': 'http://localhost:3000',
+                        changeOrigin: true      // 配置 Origin 为 true 后即可
+                    }
+                }
+            };
+            ```
+    - 5.```devServer.proxy``` 的更多配置参数
+        - 实际上，proxy 的底层是用了 [http-proxy-middleware](https://github.com/chimurai/http-proxy-middleware) 这个包，
+        - 所以，在 proxy 里可以配置更多的参数，[点击查看所有proxy配置参数](https://github.com/chimurai/http-proxy-middleware#http-proxy-options)
