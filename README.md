@@ -3282,7 +3282,7 @@ webpack4 各种语法 入门讲解
                 document.body.appendChild(button)
                 ```
 
-- ### 5-4 使用 WebpackDevServer 实现请求转发
+- ### 5-4 使用 WebpackDevServer.proxy 实现请求转发
     - 1.我们先来看一个项目
         ```
         // 项目目录
@@ -3648,3 +3648,314 @@ webpack4 各种语法 入门讲解
     - 5.```devServer.proxy``` 的更多配置参数
         - 实际上，proxy 的底层是用了 [http-proxy-middleware](https://github.com/chimurai/http-proxy-middleware) 这个包，
         - 所以，在 proxy 里可以配置更多的参数，[点击查看所有proxy配置参数](https://github.com/chimurai/http-proxy-middleware#http-proxy-options)
+        
+- ### 5-5 WebpackDevServer 解决单页面应用路由问题
+    - 0.「局限性」
+        - 由于 ```historyApiFallback``` 是 devServer 下的配置项，所以上线后，就没有效果了，只能在开发时本地服务端里跑
+        - 由于这个问题，前端是没法解决的
+        - 于是，当开发完，上线时，要让后端配置对应的路由
+    - 1.先来看一个 单页面应用 项目
+        - 项目思路：
+            - ```index.js``` 为整个应用的入口文件，根据请求路由，渲染不同的组件
+            - 默认情况下，请求路由 如 "localhost:8080/list"，默认情况下会去服务器里找 "list.html"文件，如果找不到，则返回not found
+                - 解决方法：在 webpack.config.js，设置 module.exports.devServer.historyApiFallback: true
+                - 设置为 true 后，意思是：如果访问某个路由，如果找不到对应的文件，则会默认加载 index.html 的内容
+                - 只要加载了 index.html，而 index.html 又加载了 index.js 的入口文件，所以 index.js 里面的路由逻辑就能生效
+        ```js
+        // index.js
+        import React, {Component} from 'react'
+        import {BrowserRouter, Route} from 'react-router-dom'
+        import ReactDom from 'react-dom'
+        import List from './list.js'
+        import Home from './home.js'
+
+        class App extends Component {
+            render(){
+                return (
+                    <BrowserRouter>
+                        <div>
+                            <Route path="/" exact component={Home} />   // 这里的 exact 是为了渲染其他组件的时候，不出现 Home
+                            <Route path="/list" component={List} />
+                        </div>
+                    </BrowserRouter>
+                )
+            }
+        }
+
+        ReactDom.render(<App />, document.getElementById('root'))
+        ```
+        ```js
+        // home.js
+        import React, {Component} from 'react'
+
+        class Home extends Component {
+            render(){
+                return <div>Home Page</div>
+            }
+        }
+        export default Home
+        ```
+        ```js
+        // list.js
+        import React, {Component} from 'react'
+
+        class List extends Component {
+            render(){
+                return <div>List Page</div>
+            }
+        }
+        export default List
+        ```
+        ```html
+        // index.html
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <title>webpack 测试</title>
+        </head>
+        <body id="root">
+            
+        </body>
+        </html>
+        ```
+        ```js
+        // webpack.config.js
+        const path = require('path')
+        const HtmlWebpackPlugin = require('html-webpack-plugin')
+        const CleanWebpackPlugin = require('clean-webpack-plugin')
+        const webpack = require('webpack')
+
+        module.exports = {
+            // mode: 'development',
+            // devtool: 'cheap-module-eval-source-map',
+            mode: 'production',
+            devtool: 'cheap-module-source-map',
+            entry: './src/index.js',
+            devServer: {
+                contentBase: './dist',
+                open: true,
+                port: 8080,
+                hot: true,
+                hotOnly: true,
+                historyApiFallback: true
+            },
+            module:{
+                rules: [{
+                    test: /\.js$/,
+                    exclude: /node_modules/,
+                    loader: 'babel-loader'
+                },{
+                    test: /\.(jpg|png|gif)$/,
+                    use: {
+                        loader: 'url-loader',
+                        options: {
+                            name: '[name].[hash].[ext]',
+                            outputPath: 'img/',
+                            limit: 10240
+                        }
+                    }
+                },{
+                    test: /\.(eot|ttf|svg)$/,
+                    use: 'file-loader'
+                },{
+                    test: /\.s?css$/,
+                    use: [
+                        'style-loader',
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                importLoader: 2
+                            }
+                        },
+                        'sass-loader',
+                        'postcss-loader'
+                    ]
+                }]
+            },
+            plugins:[
+                new HtmlWebpackPlugin({
+                    template: 'src/index.html'
+                }),
+                new CleanWebpackPlugin(),
+                new webpack.HotModuleReplacementPlugin()
+            ],
+            output: {
+                filename: '[name].bundle.js',
+                path: path.resolve(__dirname, 'dist')
+            }
+        }
+        ```
+    - 2.```historyApiFallback``` 更多配置方式
+        - [historyApiFallback 官方github文档](https://github.com/bripkens/connect-history-api-fallback)
+        - 1.直接路由重写
+            ```js
+            // webpack.config.js
+            module.exports = {
+                //...
+                devServer: {
+                    historyApiFallback: {
+                        rewrites: [
+                            { from: /^\/$/, to: '/views/landing.html' },
+                            { from: /^\/subpage/, to: '/views/subpage.html' },
+                            { from: /./, to: '/views/404.html' }
+                        ]
+                    }
+                }
+            };
+            ```
+        - 2.更灵活的 函数重写
+            ```js
+            // webpack.config.js
+            module.exports = {
+                //...
+                devServer: {
+                    historyApiFallback: {
+                        rewrites: [
+                            from: /^\/libs\/.*$/,
+                            to: function(context) {
+                                return '/bower_components' + context.parsedUrl.pathname;
+                            }
+                        ]
+                    }
+                }
+            };
+            ```
+- ### 5-6 EsLint 在 Webpack 中的配置
+    - 1.基本使用方法
+        - 1.安装 ```npm i -D eslint```
+        - 2.```EsLint```的配置文件
+            - ```npx eslint --init```
+            - 业界通用方案
+                - 1.Use a popular style guide
+                - 2.Airbnb
+                - 3...
+                - 4.Would you like to install them now with them? （你要安装依赖吗 Yes）
+        - 3.配置完后，项目的根目录下就有了一个 eslint 的配置文件 ```.eslintrc.js```
+            ```js
+            // .eslintrc.js
+            module.exports = {
+                "extends": "airbnb"
+            }
+            ```
+        - 4.用命令行检测代码是否规范
+            - ```npx eslint src``` 意思是检查src目录下的文件
+    - 2.在命令行中使用 eslint —— 使用案例1
+        - 1.上面 [5-5 WebpackDevServer 解决单页面应用路由问题]() 的项目中
+        - 2.使用配置
+            ```js
+            // .eslintrc.js
+            module.exports = {
+                "extends": "airbnb",
+                "parser": "babel-eslint"   // 需要安装 npm i -D babel-eslint
+            }
+            ```
+        - 3.执行命令 ```npx eslint src```
+    - 3.在VScode 中使用 eslint —— 使用案例2
+        - 1.安装 VScode 插件 eslint
+        - 2.配置好 ```.eslintrc.js```
+            ```js
+            // .eslintrc.js
+            module.exports = {
+                "extends": "airbnb",
+                "parser": "babel-eslint"   // 需要安装 npm i -D babel-eslint
+            }
+            ```
+        - 3.在 VScode 中打开对应的文件，下红色的波浪线 即是 eslint 的不规范代码提示
+        <br><br>
+        - 4.如果不想遵循某些规范，则把提示去除即可
+            - 1.在 VScode 编辑器中，鼠标hover 在红色波浪线上，提示的右侧 有 ```... eslint (react/prefer-stateless-function)```
+            - 2.然后 把 ```react/prefer-stateless-function``` 规则复制出来
+            - 3.在 ```.eslintrc.js``` 中取消该规则
+                ```js
+                // .eslintrc.js
+                module.exports = {
+                    "extends": "airbnb",
+                    "parser": "babel-eslint",
+                    "rules": {
+                        "react/prefer-stateless-function": 0   // 不遵循该规则
+                    },
+                    globals: {
+                        document: false     // 不允许后面的代码覆盖 document
+                    }
+                }
+                ```
+
+    - 3.Webpack 中使用 eslint —— 使用案例3
+        - 0.[eslint-loader Webpack官网文档](https://webpack.js.org/loaders/eslint-loader/#root)
+        - 1.安装 ```npm i -D eslint-loader```
+        - 2.配置
+            ```js
+            // webpack.config.js
+            module.exports = {
+                devServer: {
+                    overlay: true   // 配置了 overlay 之后，如果有eslint错误，则会在浏览器里提示
+                },
+                module: {
+                    rules: [{
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        use: ['babel-loader','eslint-loader']   // 在babel之前使用 eslint
+                    }]
+                }
+            }
+            ```
+        - 3.执行命令 ```npm run start``` 其中 ```"start": "webpack-dev-server"```
+        - 4.如果有问题 自动修复
+            - 只能修复简单问题
+            ```js
+            // webpack.config.js
+            module.exports = {
+                devServer: {
+                    overlay: true
+                },
+                module: {
+                    rules: [{
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        use: ['babel-loader',{
+                            loader: 'eslint-loader',
+                            options: {
+                                fix: true,   // 有问题 自动修复
+                                cache: true  // 能提高反复打包速度。此选项将启用将linting结果缓存到文件中。
+                            }
+                        }]
+                    }]
+                }
+            }
+            ```
+        - 5.也可以这么配置
+            - 默认情况下，是不可以把 ```eslint-loader``` 在 ```babel-loader``` 后执行的
+            ```js
+            // webpack.config.js
+            module.exports = {
+                devServer: {
+                    overlay: true
+                },
+                module: {
+                    rules: [{
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        use: [{
+                            loader: 'eslint-loader',
+                            options: {
+                                fix: true,
+                                cache: true
+                            },
+                            force: 'pre'    // 强制优先执行 eslint-loader 即可
+                        },'babel-loader']
+                    }]
+                }
+            }
+            ```
+        - 6.<span style="color:red">但是</span>：
+            - 一般情况下，我不会在 ```webpack``` 中使用 ```eslint-loader``` , 因为他会降低我的打包速度
+            - 那我会怎么做呢？
+                - 一般你写代码的时候，你随便写
+                - 在你准备提交 git仓库 的时候
+                - ```git 钩子 eslint src``` 命令行执行
+                - 在你准备向 git 提交代码的时候，对你代码进行 eslint 检测
+                - 如果不符合规范，则会禁止你提交到 git 仓库里
+            - 但是这样的话，就变成了 上面 命令行的提示方式了，没有了图形界面的交互方式
