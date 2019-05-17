@@ -1093,6 +1093,8 @@ webpack4 各种语法 入门讲解
             rules:[
                 test: /\.js$/, 
                 exclude: /node_modules/,  // 排除 node_modules 目录的文件
+                // include: path.resolve(__dirname, '../src'),
+                // 除了可以用 exclude，还可以用 include 意思是只有在 src 目录下的文件才执行 babel-loader
                 loader: "babel-loader",
                 options: {
                     presets: ["@babel/preset-env"]
@@ -3959,3 +3961,85 @@ webpack4 各种语法 入门讲解
                 - 在你准备向 git 提交代码的时候，对你代码进行 eslint 检测
                 - 如果不符合规范，则会禁止你提交到 git 仓库里
             - 但是这样的话，就变成了 上面 命令行的提示方式了，没有了图形界面的交互方式
+- ### 5-8 Webpack 性能优化
+    - 1.提升 Webpack 打包速度的方法
+        - 1.跟上技术的迭代 (Node, Npm, Yarn)
+            - 原因：这些技术每次更新，都会做内部的优化，所以能提升打包速度。
+        - 2.在尽可能少的模块上应用 Loader 
+            - 思路：尽可能的让 Loader 的作用范围越小越好
+        - 3.Plugin 尽可能精简 并确 保可靠
+            - 尽可能少的使用 Plugin
+            - 并确保 Plugin 的可靠性，一般官网推荐的 Plugin 都比较可靠
+            - 如果非要使用第三方插件，也要尽量的使用 已经被社区 **验证过的，性能比较好的** 插件
+            <br><br>
+            - 优化案例1：
+                - ```OptimizeCSSAssetsPlugin``` 这个 css 压缩插件
+                - 只有在线上环境 ```webpack.prod.js``` 我们才需要压缩，提供文件的加载速度
+                - 而在开发环境 ```webpack.dev.js``` ，我们就不要使用 这个 css 压缩插件了，因为执行 css压缩 这个动作需要额外的工作量，会增加打包的时间。
+                - 因为在整个开发过程中，我们会反复的打包测试；
+                - 而往往打包线上代码，只需要打包一次即可
+        - 4.resolve 参数合理配置
+            - 当我去引入一个其他(没有文件后缀名)模块的时候，我会去到 ```webpack.config.js``` 里的 ```module.exports.resolve.extensions``` 找到里面配置项，然后从左到右，尝试找到该文件。如果有该文件则读取成功，如果没有则报错。
+            - 但是如果显式写明的文件后缀名，就不会再去调用 ```resolve.extensions``` 和 node底层的文件查找程序了
+                - 如 ```import Child from './child/child.jsx'```
+            - 看一个例子
+                ```
+                // 项目目录
+                webpack-demo
+                    |- /node_modules
+                    |- /src
+                        |- /child
+                            |- child.jsx
+                        |- index.html
+                        |- index.js
+                    |- package.json
+                    |- webpack.config.js
+                ```
+                ```js
+                // index.js
+                import Child from './child/child'   // 引入一个没有后缀名的模块，会去找配置文件的 resolve.extensions 里找
+
+                // 业务逻辑...
+                ```
+                ```js
+                // webpack.config.js
+                const path = require('path')
+
+                module.exports = {
+                    entry: './src/index.js',
+                    resolve: {
+                        extensions: ['.js', '.jsx']   // 此处配置 文件后缀名，从左到右查找
+                    },
+                    module: {
+                        rules: [{
+                            test: /\.jsx?$/,
+                            include: path.resolve(__dirname, '../src'),
+                            loader: 'babel-loader'
+                        }]
+                    },
+                    output: {
+                        filename: '[name].bundle.js',
+                        path: path.resolve(__dirname, 'dist')
+                    }
+                }
+                ```
+            - <span style='color:red'>但是</span>: 你如果在 ```resolve.extensions``` 配置了多项后缀，则会损耗性能，降低效率
+                - 如
+                    ```js
+                    // webpack.config.js
+                    module.exports = {
+                        resolve: {
+                            extensions: ['.css', '.jpg', '.js', '.jsx']
+                            // 当写了多个后缀以后，就需要更多次的 遍历查找，因此损耗性能，故不推荐
+                        }
+                    }
+                    ```
+            - #### 推荐用法：
+                - 一般 CSS文件、图片、字体文件... 等的资源类文件，直接显式引入就好
+                    - 如 ```import picture from './child/picture.jpg'```
+                    - ```import font from './child/font.ttf'```
+                - 而像 逻辑类的代码，如 ['.vue', '.js', '.jsx']，就配置在 ```resolve.extensions``` 就好
+                - 这样的话，我们写起来方便了一些，性能上也做了平衡
+                - <span style='color:red'>问题</span>: 为什么不都把所有文件 显式引入呢？这样就不没有性能损耗的问题了吗？
+
+[目前视频进度 《5-9 webpack 性能优化(2)》 12:00]()
