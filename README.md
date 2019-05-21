@@ -4125,8 +4125,8 @@ webpack4 各种语法 入门讲解
             - 我在开发这个项目的过程中，**反复打包**调试的时候，其实变的只是业务部分，而第三方库是不变的。但是在反复打包调试的时候，却会反复的对所有的代码进行分析和重新打包 (包括第三方库的代码)，这样做是有性能上的浪费的。
             - 但是，实际上 第三方库的代码 至始至终都是没有变过的
                 - 所以 我们可以把第三方库的代码单独打包成一个文件
-                - 然后只在第一次打包的时候 去分析里面的代码
-                - 之后再次打包的时候，直接去用之前分析过的结果就可以了
+                - 然后只在第一次打包的时候 去分析和打包里面的代码
+                - 之后再次打包的时候，直接去用之前分析打包的结果就可以了
             - 这是最理想的优化方式
             - 例子：在上面 [5-5](#5-5-webpackdevserver-解决单页面应用路由问题) 的项目中
                 - 改写成
@@ -4198,10 +4198,13 @@ webpack4 各种语法 入门讲解
                         ```
                 - 第三步
                     - 目前的问题：
-                        - 我们的目标：第三方模块只打包一次
+                        - 使用的几个第三方库 ['react', 'react-dom', 'lodash'] 都被打包到一个文件里了
+                        - 而且，也使用了 AddAssetHtmlWebpackPlugin 插件，将 被打包好的 vendors.dll.js 引入了 业务文件 index.html 里了
+                        - 但是，webpack 在打包的时候，在业务文件里，如 index.js 如果遇到如 ```import _ from 'lodash'``` 这样的引入语句，还是会去 node_modules 里面找，**而不是引用 已经打包好的 vendors.dll.js 里面的 lodash**
+                    - 我们的目标：第三方模块只打包一次
                         - 1.第三方模块只打包一次 （实现了）
                         - 2.我们引入第三方模块的时候，要去使用dll文件引入
-                    - 那么要实现第二步，我们该怎么做呢？
+                    - 那么要让 webpack 优先调用 vendors.dll.js，而不是先去 node_modules 里面调用，我们该怎么做呢？
                         - 首先，我们在打包 dll 文件的时候，要做一个 **映射**
                     ```js
                     // webpack.dll.js
@@ -4226,14 +4229,15 @@ webpack4 各种语法 入门讲解
                         ]
                     }
                     ```
-                - **总结**：
+                - **小结**：
                     - 当我们做完第三步之后，有了这个映射文件 'vendors.manifest.json'
-                    - 那么在我们 webpack打包的时候，就可以结合 output.library 输出的全局变量vendors，和 'vendors.manifest.json' 映射文件，然后对源代码进行分析
-                    - 一但分析发现，你使用的内容 (业务代码中引入的'react', 'react-dom', 'lodash'...等)，是已经被打包在 vendors.dll.js 中的
+                    - 那么我们在用 webpack 打包的时候，就可以结合 output.library 输出的全局变量 vendors，和 'vendors.manifest.json' 映射文件，然后对源代码进行分析
+                    - 一但分析发现，你使用的内容 (业务代码中引入的'react', 'react-dom', 'lodash'...等的第三方库)，是已经被打包在 vendors.dll.js 中的
                     - 那么他就会直接使用 vendors.dll.js 中的内容了，而不会再去 node_modules 中引入模块了
 
                 - 第四步
                     - 那么，怎么结合全局变量 vendors，和刚刚生成的 vendors.manifest.json 映射文件，到整个项目中去呢？
+                    - 让 webpack 优先调用 vendors.dll.js，而不是先去 node_modules 里面调用第三方库呢？
                     ```js
                     // webpack.config.js 或者 webpack.common.js
                     const AddAssetHtmlWebpackPlugin = require('add-asset-html-webpack-plugin')
@@ -4261,10 +4265,182 @@ webpack4 各种语法 入门讲解
                         - webpack.DllReferencePlugin 是 dll 引用的插件。它会干什么呢？
                         - 当我们在打包的时候，会引入一些第三方模块
                         - 当它发现你引入了第三方模块的时候，它会去下面 manifest 的 vendors.manifest.json 里面找 第三方模块的映射关系，**如果找到了**该模块的映射关系，就会到全局变量vendors里面去拿，不再从 node_modules 里面打包对应的模块
-                        - 如果**没找到**，vendors.manifest.json 里没有对应的 映射关系，才会去 node_modules 里面打包对应的模块
+                        - 如果**没找到**。vendors.manifest.json 里没有对应的 映射关系，才会去 node_modules 里面打包对应的模块
                 - 第五步，总结
                     - 使用 DllPlugin 和 DllReferencePlugin 能够很大程度的提高你的 打包速度
                     - 这时候，你在打包，就会发现使用了 DllReferencePlugin 会比没使用时，打包速度快了很多 (可以注释掉 DllReferencePlugin插件 测试一下)
 
+            - 对第三方库的拆分打包
+                - 1.对于上面的项目，现在我们对 webpack.dll.js 再进行变更
+                    - 第一步
+                        ```js
+                        // webpack.dll.js
+                        const path = require('path')
+                        const webpack = require('webpack')
 
-[目前视频进度 《5-10 Webpack 性能优化(3)》 3:30]()
+                        module.exports = {
+                            mode: 'production',
+                            entry: {
+                                lodash: ['lodash'],    // 在这里做拆分打包
+                                react: ['react', 'react-dom'] // 在这里做拆分打包
+                            },
+                            output: {
+                                filename: '[name].dll.js',
+                                path: path.resolve(__dirname, '../dll'),
+                                library: '[name]'
+                            },
+                            plugins: [
+                                new webpack.DllPlugin({   // 借助这个插件做映射
+                                    name: '[name]',   // 对上面 output.library 输出的库文件 做分析，所以也写成 '[name]'
+                                    path: path.resolve(__dirname, '../dll/[name].manifest.json'),  // 分析的 映射结果 放在这里
+                                })
+                            ]
+                        }
+                        ```
+                        在上面，对 lodash 和 react 做了拆分打包后，在 '/dll' 跟目录的 dll 目录下会生成
+                        ```
+                        /dll
+                            |- react.dll.js
+                            |- react.manifest.js
+                            |- lodash.dll.js
+                            |- lodash.manifest.js
+                        ```
+                    - 第二步
+                        - 然后，还需要更改 webpack.common.js 的配置
+                        - 将新生成的 ```react.dll.js``` 和 ```lodash.dll.js``` 引入 ```index.html```
+                        - 再将 这两个分别打包的库的映射关系，也引入 webpack 的打包过程中
+                        ```js
+                        // webpack.config.js 或者 webpack.common.js
+                        const AddAssetHtmlWebpackPlugin = require('add-asset-html-webpack-plugin')
+                        const webpack = require('webpack')
+
+                            module.exports = {
+                                plugins: [
+                                    new HtmlWebpackPlugin({
+                                        template: 'src/index.html'
+                                    }),
+                                    new CleanWebpackPlugin({
+                                        dafult: ['dist'],
+                                        root: path.resolve(__dirname, '../')
+                                    }),
+                                    new AddAssetHtmlWebpackPlugin({
+                                        filepath: path.resolve(__dirname, '../dll/react.dll.js')
+                                    }),
+                                    new AddAssetHtmlWebpackPlugin({
+                                        filepath: path.resolve(__dirname, '../dll/lodash.dll.js')
+                                    }),
+                                    new webpack.DllReferencePlugin({
+                                        manifest: path.resolve(__dirname, '../dll/react.manifest.json')
+                                    }),
+                                    new webpack.DllReferencePlugin({
+                                        manifest: path.resolve(__dirname, '../dll/lodash.manifest.json')
+                                    })
+                                ]
+                            }
+                        ```
+                        这时候，打包一下，在浏览器里执行，验证一下看是否能正确打包。然后在浏览器控制台里看一下 react 和 lodash 这两个全局变量是否存在，存在即正常。
+                    - 思考：如果在一个大型项目中，需要打包的第三方库很多
+                        ```js
+                        // webpack.dll.js
+                        module.exports = {
+                            mode: 'production',
+                            entry: {
+                                lodash: ['lodash'],
+                                react: ['react'],
+                                reactDom: ['react-dom'],
+                                jquery: ['jquery'],
+                                // ...
+                            }
+                        }
+                        ```
+                        那么，是不是就需要，在 module.exports.plugins 里面没玩没了的加 ```new AddAssetHtmlWebpackPlugin``` 和 ```new webpack.DllReferencePlugin``` ？
+                        ```js
+                        // webpack.config.js 或者 webpack.common.js
+                        module.exports = {
+                            plugins: [
+                                new AddAssetHtmlWebpackPlugin({
+                                    filepath: path.resolve(__dirname, '../dll/react.dll.js')
+                                }),
+                                new AddAssetHtmlWebpackPlugin({
+                                    filepath: path.resolve(__dirname, '../dll/lodash.dll.js')
+                                }),
+                                new webpack.DllReferencePlugin({
+                                    manifest: path.resolve(__dirname, '../dll/react.manifest.json')
+                                }),
+                                new webpack.DllReferencePlugin({
+                                    manifest: path.resolve(__dirname, '../dll/lodash.manifest.json')
+                                }),
+                                new webpack.DllReferencePlugin({
+                                    manifest: path.resolve(__dirname, '../dll/react_dom.manifest.json')
+                                }),
+                                new webpack.DllReferencePlugin({
+                                    manifest: path.resolve(__dirname, '../dll/react_dom.manifest.json')
+                                }),
+                                // ... 没玩没了的一直加下去?
+                            ]
+                        }
+                        ```
+                        - 很显然，这么做是不太合理的。
+                        - 有没有什么办法可以智能化一些呢？完全可以，看下一步
+                        
+                    - 第三步
+                        - 1.把 module.exports.plugins 数组 抽取提前
+                        - 2.通过node 分析 ```'/dll'``` 文件夹下有几个 dll文件，有几个 manifest文件，然后动态的往 plugins数组 里面添加 dll文件 和 manifest文件。
+                        ```js
+                        // webpack.config.js 或者 webpack.common.js
+                        const fs = require('fs')
+
+                        const plugins = [   // 基础的两个 plugin 先手动引入
+                            new HtmlWebpackPlugin({
+                                template: 'src/index.html'
+                            }),
+                            new CleanWebpackPlugin({
+                                dafult: ['dist'],
+                                root: path.resolve(__dirname, '../')
+                            }),
+                        ]
+
+                        const files = fs.readdirSync(path.resolve(__dirname, '../dll'))  // 读取 '/dll' 文件夹下的文件
+                        files.forEach(file => {
+                            if(/.*\.dll.js/.test(file)){   // 如果是 dll.js 文件，就往 plugins数组 里加一个
+                                plugins.push(
+                                    new AddAssetHtmlWebpackPlugin({
+                                        filepath: path.resolve(__dirname, '../dll', file)
+                                    })
+                                )
+                            }
+                            if(/.*\.manifest.json/.test(file)){   // 如果是 manifest.json 文件，就往 plugins数组 里加一个
+                                plugins.push(
+                                    new webpack.DllReferencePlugin({
+                                        manifest: path.resolve(__dirname, '../dll', file)
+                                    })
+                                )
+                            }
+                        })
+
+                        module.exports = {
+                            entry: {...},
+                            plugins,    // 因为键值一样，所以只写一个plugins即可，相当于 plugins：plugins
+                            output: {...}
+                        }
+                        ```
+                        当我们在 webpack.common.js 中配置完自动添加该插件了以后，如果需要添加新的第三方库，我们直接在 webpack.dll.js 中添加即可 (其它地方就无需改动了，也不用傻傻的一个一个插件手动添加了)。
+                        ```js
+                        // webpack.dll.js
+                        module.exports = {
+                            mode: 'production',
+                            entry: {
+                                lodash: ['lodash'],
+                                react: ['react'],
+                                reactDom: ['react-dom'],
+                                jquery: ['jquery'],
+                                // ...
+                            }
+                        }
+                        ```
+                    - 第四步 验证：
+                        - 在上面配置完后，执行打包
+                        - 如果能能正确执行，且能正确在 index.html 中，引入 ```.dll.js``` 文件，即是打包成功。
+                        - 另外，```.manifest.js``` 是给 webpack 打包时候使用的，不是给 index.html 中使用的
+
+[目前视频进度 《5-11 Webpack 性能优化(5)》 0：00]()
