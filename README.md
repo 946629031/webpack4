@@ -3826,6 +3826,10 @@ webpack4 各种语法 入门讲解
             };
             ```
 - ### 5-6 EsLint 在 Webpack 中的配置
+    - 0.什么是EsLint?
+        - 答：它是一套 **代码风格的规范**
+        - 方便团队协助开发 和 降低维护成本
+        - 其中有 Airbnb 编程规范、Google 编程规范 ...等
     - 1.基本使用方法
         - 1.安装 ```npm i -D eslint```
         - 2.```EsLint```的配置文件
@@ -3979,67 +3983,288 @@ webpack4 各种语法 入门讲解
                 - 因为在整个开发过程中，我们会反复的打包测试；
                 - 而往往打包线上代码，只需要打包一次即可
         - 4.resolve 参数合理配置
-            - 当我去引入一个其他(没有文件后缀名)模块的时候，我会去到 ```webpack.config.js``` 里的 ```module.exports.resolve.extensions``` 找到里面配置项，然后从左到右，尝试找到该文件。如果有该文件则读取成功，如果没有则报错。
-            - 但是如果显式写明的文件后缀名，就不会再去调用 ```resolve.extensions``` 和 node底层的文件查找程序了
-                - 如 ```import Child from './child/child.jsx'```
-            - 看一个例子
-                ```
-                // 项目目录
-                webpack-demo
-                    |- /node_modules
-                    |- /src
-                        |- /child
-                            |- child.jsx
-                        |- index.html
-                        |- index.js
-                    |- package.json
-                    |- webpack.config.js
-                ```
-                ```js
-                // index.js
-                import Child from './child/child'   // 引入一个没有后缀名的模块，会去找配置文件的 resolve.extensions 里找
+            - 1.```resolve``` 后缀名
+                - 当我去引入一个其他(没有文件后缀名)模块的时候，我会去到 ```webpack.config.js``` 里的 ```module.exports.resolve.extensions``` 找到里面配置项，然后从左到右，尝试找到该文件。如果有该文件则读取成功，如果没有则报错。
+                - 但是如果显式写明的文件后缀名，就不会再去调用 ```resolve.extensions``` 和 node底层的文件查找程序了
+                    - 如 ```import Child from './child/child.jsx'```
+                - 看一个例子
+                    ```
+                    // 项目目录
+                    webpack-demo
+                        |- /node_modules
+                        |- /src
+                            |- /child
+                                |- child.jsx
+                            |- index.html
+                            |- index.js
+                        |- package.json
+                        |- webpack.config.js
+                    ```
+                    ```js
+                    // index.js
+                    import Child from './child/child'   // 引入一个没有后缀名的模块，会去找配置文件的 resolve.extensions 里找
 
-                // 业务逻辑...
-                ```
-                ```js
-                // webpack.config.js
-                const path = require('path')
-
-                module.exports = {
-                    entry: './src/index.js',
-                    resolve: {
-                        extensions: ['.js', '.jsx']   // 此处配置 文件后缀名，从左到右查找
-                    },
-                    module: {
-                        rules: [{
-                            test: /\.jsx?$/,
-                            include: path.resolve(__dirname, '../src'),
-                            loader: 'babel-loader'
-                        }]
-                    },
-                    output: {
-                        filename: '[name].bundle.js',
-                        path: path.resolve(__dirname, 'dist')
-                    }
-                }
-                ```
-            - <span style='color:red'>但是</span>: 你如果在 ```resolve.extensions``` 配置了多项后缀，则会损耗性能，降低效率
-                - 如
+                    // 业务逻辑...
+                    ```
                     ```js
                     // webpack.config.js
+                    const path = require('path')
+
                     module.exports = {
+                        entry: './src/index.js',
                         resolve: {
-                            extensions: ['.css', '.jpg', '.js', '.jsx']
-                            // 当写了多个后缀以后，就需要更多次的 遍历查找，因此损耗性能，故不推荐
+                            extensions: ['.js', '.jsx']   // 此处配置 文件后缀名，从左到右查找
+                        },
+                        module: {
+                            rules: [{
+                                test: /\.jsx?$/,
+                                include: path.resolve(__dirname, '../src'),
+                                loader: 'babel-loader'
+                            }]
+                        },
+                        output: {
+                            filename: '[name].bundle.js',
+                            path: path.resolve(__dirname, 'dist')
                         }
                     }
                     ```
-            - #### 推荐用法：
-                - 一般 CSS文件、图片、字体文件... 等的资源类文件，直接显式引入就好
-                    - 如 ```import picture from './child/picture.jpg'```
-                    - ```import font from './child/font.ttf'```
-                - 而像 逻辑类的代码，如 ['.vue', '.js', '.jsx']，就配置在 ```resolve.extensions``` 就好
-                - 这样的话，我们写起来方便了一些，性能上也做了平衡
-                - <span style='color:red'>问题</span>: 为什么不都把所有文件 显式引入呢？这样就不没有性能损耗的问题了吗？
+                - <span style='color:red'>但是</span>: 你如果在 ```resolve.extensions``` 配置了多项后缀，则会损耗性能，降低效率
+                    - 如
+                        ```js
+                        // webpack.config.js
+                        module.exports = {
+                            resolve: {
+                                extensions: ['.css', '.jpg', '.js', '.jsx']
+                                // 当写了多个后缀以后，就需要更多次的 遍历查找，因此损耗性能，故不推荐
+                            }
+                        }
+                        ```
+                - #### 推荐用法：
+                    - 一般 CSS文件、图片、字体文件... 等的资源类文件，直接显式引入就好
+                        - 如 ```import picture from './child/picture.jpg'```
+                        - ```import font from './child/font.ttf'```
+                    - 而像 逻辑类的代码，如 ['.vue', '.js', '.jsx']，就配置在 ```resolve.extensions``` 就好
+                    - 这样的话，我们写起来方便了一些，性能上也做了平衡
+                    - <span style='color:red'>问题</span>: 为什么不都把所有文件 显式引入呢？这样就不没有性能损耗的问题了吗？
+            - 2.```resolve``` 默认文件名
+                - **注意**，这种方式仍然会对性能有影响，尽量不要使用
+                - 如果在业务代码中，我这样引入文件
+                    ```js
+                    // index.js
+                    import Child from './child/'   // 如果没写明文件名，默认会匹配index文件名，也可以在 resolve.mainFiles 中配置其他文件名
+                    ```
+                    ```js
+                    // webpack.config.js
+                    const path = require('path')
 
-[目前视频进度 《5-9 webpack 性能优化(2)》 12:00]()
+                    module.exports = {
+                        entry: './src/index.js',
+                        resolve: {
+                            extensions: ['.js', '.jsx'],   // 此处配置 文件后缀名，从左到右查找
+                            mainFiles: ['index', 'child']  // 从左到右查找, 先看有没有index文件名的文件，然后再看child
+                        },
+                        module: {
+                            rules: [{
+                                test: /\.jsx?$/,
+                                include: path.resolve(__dirname, '../src'),
+                                loader: 'babel-loader'
+                            }]
+                        },
+                        output: {
+                            filename: '[name].bundle.js',
+                            path: path.resolve(__dirname, 'dist')
+                        }
+                    }
+                    ```
+            
+            - 3.```resolve``` 模块别名
+                - **注意**：这种方式，对于某些 **层级比较深的文件** 的情况下，还是比较好用的
+                - 如果引入了一个 node_module 中不存在的模块
+                - 如何给模块取别名？
+                    ```js
+                    // index.js
+                    import Child from 'delllee'   // 如何给模块取别名
+                    ```
+                    ```js
+                    // webpack.config.js
+                    const path = require('path')
+
+                    module.exports = {
+                        entry: './src/index.js',
+                        resolve: {
+                            extensions: ['.js', '.jsx'],
+                            alias: {    // 别名
+                                delllee: path.resolve(__dirname, '../src/child')
+                                // 把这个模块名称指向 某个目录下的文件
+                            }
+                        },
+                        module: {
+                            rules: [{
+                                test: /\.jsx?$/,
+                                include: path.resolve(__dirname, '../src'),
+                                loader: 'babel-loader'
+                            }]
+                        },
+                        output: {
+                            filename: '[name].bundle.js',
+                            path: path.resolve(__dirname, 'dist')
+                        }
+                    }
+                    ```
+        - 5.使用 DLLPlugin 提高打包速度
+            - 假如我现在有一个这样的业务代码
+                ```js
+                // index.js
+                import React, {Component} from 'react'
+                import {BrowserRouter, Route} from 'react-router-dom'
+                import ReactDom from 'react-dom'
+                import _ from 'lodash'
+
+                // 业务代码...
+                ```
+            - 我在开发这个项目的过程中，**反复打包**调试的时候，其实变的只是业务部分，而第三方库是不变的。但是在反复打包调试的时候，却会反复的对所有的代码进行分析和重新打包 (包括第三方库的代码)，这样做是有性能上的浪费的。
+            - 但是，实际上 第三方库的代码 至始至终都是没有变过的
+                - 所以 我们可以把第三方库的代码单独打包成一个文件
+                - 然后只在第一次打包的时候 去分析里面的代码
+                - 之后再次打包的时候，直接去用之前分析过的结果就可以了
+            - 这是最理想的优化方式
+            - 例子：在上面 [5-5](#5-5-webpackdevserver-解决单页面应用路由问题) 的项目中
+                - 改写成
+                    ```js
+                    // index.js
+                    import React, { Component } from 'react'
+                    import ReactDom from 'react-dom'
+                    import _ from 'lodash'
+
+                    class App extends Component {
+                        render(){
+                            return (
+                                <div>
+                                    <div>{_.join(['This','is','app'], ' ')}</div>
+                                </div>
+                            )
+                        }
+                    }
+
+                    ReactDom.render(<App />, ducument.getElementById('root'))
+                    ```
+                    **思路**：根据上面优化思路，现在我们把 ['react', 'react-dom', 'lodash'] 这个三个先打包到一个文件里
+                    ```js
+                    // webpack.dll.js
+                    const path = require('path')
+
+                    module.exports = {
+                        mode: 'production',
+                        entry: {
+                            vendors: ['react', 'react-dom', 'lodash']
+                        },
+                        output: {
+                            filename: '[name].dll.js',
+                            path: path.resolve(__dirname, '../dll'),  // 由于clean-webpack-plugin  dist目录会被清理
+                            library: '[name]'  // 此处 [name] 的值为 vendors。意思是，我把这个打包好的文件，通过 全局变量vendors 的形式，被暴露出来，可以被全局访问 (在浏览器控制台里 输入vendors 可以查看该全局变量)
+                        }
+                    }
+                    ```
+                    ```js
+                    // package.json
+                    {
+                        "scripts": {
+                            "build:dll": "webpack --config ./build/webpack.dll.js"  // 新增这条
+                        }
+                    }
+                    ```
+                    **到此**，执行 ```npm run build:dll``` 即可将上面三个第三方库打包到一个文件中
+                - 第二步
+                    - 安装 ```npm i add-asset-html-webpack-plugin --save``` 通过这个插件，可以往HtmlWebpackPlugin生成的html文件中 引入js或css文件
+                    - 在 ```webpack.config.js``` 中添加配置
+                        ```js
+                        // webpack.config.js
+                        const AddAssetHtmlWebpackPlugin = require('add-asset-html-webpack-plugin')
+
+                        module.exports = {
+                            plugins: [
+                                new HtmlWebpackPlugin({
+                                    template: 'src/index.html'
+                                }),
+                                new CleanWebpackPlugin({
+                                    dafult: ['dist'],
+                                    root: path.resolve(__dirname, '../')
+                                }),
+                                new AddAssetHtmlWebpackPlugin({   // 添加这条配置，往HtmlWebpackPlugin生成的html文件中 引入js或css文件
+                                    filepath: path.resolve(__dirname, '../dll/vendors.dll.js')
+                                })
+                            ]
+                        }
+                        ```
+                - 第三步
+                    - 目前的问题：
+                        - 我们的目标：第三方模块只打包一次
+                        - 1.第三方模块只打包一次 （实现了）
+                        - 2.我们引入第三方模块的时候，要去使用dll文件引入
+                    - 那么要实现第二步，我们该怎么做呢？
+                        - 首先，我们在打包 dll 文件的时候，要做一个 **映射**
+                    ```js
+                    // webpack.dll.js
+                    const path = require('path')
+                    const webpack = require('webpack')
+
+                    module.exports = {
+                        mode: 'production',
+                        entry: {
+                            vendors: ['react', 'react-dom', 'lodash']
+                        },
+                        output: {
+                            filename: '[name].dll.js',
+                            path: path.resolve(__dirname, '../dll'),
+                            library: '[name]'
+                        },
+                        plugins: [
+                            new webpack.DllPlugin({   // 借助这个插件做映射
+                                name: '[name]',   // 对上面 output.library 输出的库文件 做分析，所以也写成 '[name]'
+                                path: path.resolve(__dirname, '../dll/[name].manifest.json'),  // 分析的 映射结果 放在这里
+                            })
+                        ]
+                    }
+                    ```
+                - **总结**：
+                    - 当我们做完第三步之后，有了这个映射文件 'vendors.manifest.json'
+                    - 那么在我们 webpack打包的时候，就可以结合 output.library 输出的全局变量vendors，和 'vendors.manifest.json' 映射文件，然后对源代码进行分析
+                    - 一但分析发现，你使用的内容 (业务代码中引入的'react', 'react-dom', 'lodash'...等)，是已经被打包在 vendors.dll.js 中的
+                    - 那么他就会直接使用 vendors.dll.js 中的内容了，而不会再去 node_modules 中引入模块了
+
+                - 第四步
+                    - 那么，怎么结合全局变量 vendors，和刚刚生成的 vendors.manifest.json 映射文件，到整个项目中去呢？
+                    ```js
+                    // webpack.config.js 或者 webpack.common.js
+                    const AddAssetHtmlWebpackPlugin = require('add-asset-html-webpack-plugin')
+                    const webpack = require('webpack')
+
+                        module.exports = {
+                            plugins: [
+                                new HtmlWebpackPlugin({
+                                    template: 'src/index.html'
+                                }),
+                                new CleanWebpackPlugin({
+                                    dafult: ['dist'],
+                                    root: path.resolve(__dirname, '../')
+                                }),
+                                new AddAssetHtmlWebpackPlugin({   // 添加这条配置，往HtmlWebpackPlugin生成的html文件中 引入js或css文件
+                                    filepath: path.resolve(__dirname, '../dll/vendors.dll.js')
+                                }),
+                                new webpack.DllReferencePlugin({  // 该插件作用看下面
+                                    manifest: path.resolve(__dirname, '../dll/vendors.manifest.json')
+                                })
+                            ]
+                        }
+                    ```
+                    - 思路
+                        - webpack.DllReferencePlugin 是 dll 引用的插件。它会干什么呢？
+                        - 当我们在打包的时候，会引入一些第三方模块
+                        - 当它发现你引入了第三方模块的时候，它会去下面 manifest 的 vendors.manifest.json 里面找 第三方模块的映射关系，**如果找到了**该模块的映射关系，就会到全局变量vendors里面去拿，不再从 node_modules 里面打包对应的模块
+                        - 如果**没找到**，vendors.manifest.json 里没有对应的 映射关系，才会去 node_modules 里面打包对应的模块
+                - 第五步，总结
+                    - 使用 DllPlugin 和 DllReferencePlugin 能够很大程度的提高你的 打包速度
+                    - 这时候，你在打包，就会发现使用了 DllReferencePlugin 会比没使用时，打包速度快了很多 (可以注释掉 DllReferencePlugin插件 测试一下)
+
+
+[目前视频进度 《5-10 Webpack 性能优化(3)》 3:30]()
