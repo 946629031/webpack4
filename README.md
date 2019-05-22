@@ -1341,6 +1341,7 @@ webpack4 各种语法 入门讲解
     - 1.什么是 ```Tree Shaking``` ?
         - 中文译名：摇树       （好像翻译有点生硬(　＾∀＾)）
         - ```Tree Shaking``` 是干嘛的？
+            - 官方解释：通常用于描述移除 JavaScript 上下文中的未引用代码(dead-code)。
             - 简单的说，就是把需要的留下，不需要的甩掉
             - 举个例子：
                 - 现在有一个 math 函数库，但是在我的业务代码中只使用了 add、minus 两个函数 ( 实现思路：先 import "math 函数库" 进来，然后调用 add、minus 两个函数 )。
@@ -1866,7 +1867,7 @@ webpack4 各种语法 入门讲解
             - 2.异步加载代码(import)：异步代码，无需做任何配置，会自动进行代码分割，放置到新的文件中
     - 1.```Code Splitting``` 到底是什么？
         - 为什么需要 ```Code Splitting``` ?
-            - 现在我有一个业务代码 ```main.js```
+            - 存在的问题：现在我有一个业务代码 ```main.js```
                 ```js
                 // main.js
                 const _ = require('lodash.js')  // 引入 lodash.js
@@ -1874,39 +1875,40 @@ webpack4 各种语法 入门讲解
                 console.log(_.join(['a','b','b'], '***'))   // 拼接字符串，以 '***' 分割
                 console.log(_.join(['a','d','c'], '***'))
                 ```
-            - 假设
+            - 假设，我们把 ```lodash.js``` 和 ```main.js``` 打包到一起
                 - ```lodash.js``` 为 1Mb，
                 - 业务代码```main.js``` 也为 1Mb。
                 - 那么打包后，整个 ```main.js``` 为 2Mb
                 - 当页面业务逻辑发生变化时，又要重新加载 2Mb 的内容，但是其中 ```lodash.js```(1Mb) 是没变的，这样的话，会很浪费性能和资源
-            - 另外一种方式：**手动代码分割**
-                - ```main.js``` 拆成 ```lodash.js```(1Mb) 和 ```main.js```(1Mb)
-                - 当页面业务逻辑发生变化时，只需要重新 加载 ```main.js```(1Mb) 即可
-                ```js
-                // lodash.js 函数库
-                const _ = require('lodash.js')
-                window._ = _
-                ```
-                ```js
-                // main.js 业务逻辑
-                console.log(_.join(['a','b','b'], '***'))   // 拼接字符串，以 '***' 分割
-                console.log(_.join(['a','d','c'], '***'))
-                ```
-                ```js
-                // webpack.config.js
-                const path = require('path')
+        - 另外一种方式：**手动代码分割**，分开打包
+            - ```main.js```(上面合并打包,共2MB) 拆成 ```lodash.js```(1Mb) 和 ```main.js```(1Mb)
+            - 当页面业务逻辑发生变化时，只需要重新 加载 ```main.js```(1Mb) 即可
+            - 而另外的 ```lodash.js```(1Mb) 就不需要再次加载，可以节省资源和性能，提高速度
+            ```js
+            // lodash.js 函数库
+            const _ = require('lodash.js')
+            window._ = _
+            ```
+            ```js
+            // main.js 业务逻辑
+            console.log(_.join(['a','b','b'], '***'))   // 拼接字符串，以 '***' 分割
+            console.log(_.join(['a','d','c'], '***'))
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
 
-                module.exports = {
-                    entry: {
-                        main: './src/index.js',
-                        lodash: './src/lodash.js'
-                    },
-                    output: {
-                        filename: '[name].js',
-                        path: path.resolve(__dirname, 'dist')
-                    }
+            module.exports = {
+                entry: {
+                    main: './src/index.js',
+                    lodash: './src/lodash.js'
+                },
+                output: {
+                    filename: '[name].js',
+                    path: path.resolve(__dirname, 'dist')
                 }
-                ```
+            }
+            ```
     - 2.```splitChunks``` 自动代码分割
         - 1.配置
             ```js
@@ -4443,4 +4445,19 @@ webpack4 各种语法 入门讲解
                         - 如果能能正确执行，且能正确在 index.html 中，引入 ```.dll.js``` 文件，即是打包成功。
                         - 另外，```.manifest.js``` 是给 webpack 打包时候使用的，不是给 index.html 中使用的
 
-[目前视频进度 《5-11 Webpack 性能优化(5)》 0：00]()
+        - 6.控制包文件的大小
+            - 1.在本章的前5节，我们讲解了，如何通过配置提高打包速度
+            - 2.在我们做项目打包的时候，其实我们应该让打包生成的文件 **尽可能的小** 
+                - 有的时候，我们在写代码的时候，会经常会在页面里面，引入一些模块，但是引入之后却 **没有使用的模块**
+                - 如果你又没有配置 ```Tree Shaking```，这样的话，在打包过程中，会有很多 **冗余的无用代码** 被打包进来，而这些 冗余的代码 就会拖累打包速度
+                - 所以，我们要尽量的 删除 或 不引入 那些没有用到的代码
+            - 3.我们还可以通过 ```SplitChunks``` 插件，来拆分打包，把一个大的文件，拆分成几个小的文件。这样的话，也可以提升 webpack 的打包速度。
+        - 7.借助 ```多进程``` 来提高 Webpack 的打包速度
+            - 由于 webpack 默认是通过 node.js 来执行的，所以 **webpack 默认是单进程** 的打包过程
+            - 所以，我们还可以通过借助 多进程，来帮我们提高打包速度
+            - 如：```thread-loader```, ```happypack```, ```parallel-webpack```(parallel可同时对多个页面进行打包)
+        - 8.合理使用 SourceMap
+            - 在我们打包的过程中生成 SourceMap 时，生成的 SourceMap 越详细，则打包的速度就越慢
+            - 所以，我们要根据不同的打包场景，生成合适的 SourceMap，尽量平衡 ```打包的速度``` 和 ```SourceMap的详细程度```
+
+[目前视频进度 《5-13 多页面打包配置》 0：00]()
