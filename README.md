@@ -1164,9 +1164,7 @@ webpack4 各种语法 入门讲解
         - 1.存在的问题
             - 通过 ```import "@babel/polyfill"``` 这种方案实际是有问题的，因为 它在补充注入缺失的对象或者函数的时候，**是通过全局变量的形式，会污染到全局环境**。 解决方法如下
         - 2.安装
-            - ```npm i -D @babel/plugin-transform-runtime```
-            - ```npm i -D @babel/runtime```
-            - ```npm install --save @babel/runtime-corejs2```
+            - ```npm i -D @babel/plugin-transform-runtime @babel/runtime @babel/runtime-corejs2```
         - 配置
             ```js
             // webpack.config.js
@@ -3835,7 +3833,7 @@ webpack4 各种语法 入门讲解
     - 1.基本使用方法
         - 1.安装 ```npm i -D eslint```
         - 2.```EsLint```的配置文件
-            - ```npx eslint --init```
+            - ```npx eslint --init``` 根据提示配置 ```EsLint```的配置文件
             - 业界通用方案
                 - 1.Use a popular style guide
                 - 2.Airbnb
@@ -4460,4 +4458,342 @@ webpack4 各种语法 入门讲解
             - 在我们打包的过程中生成 SourceMap 时，生成的 SourceMap 越详细，则打包的速度就越慢
             - 所以，我们要根据不同的打包场景，生成合适的 SourceMap，尽量平衡 ```打包的速度``` 和 ```SourceMap的详细程度```
 
-[目前视频进度 《5-13 多页面打包配置》 0：00]()
+
+- ### 5-13 多页面打包配置
+    - 1.存在的问题
+        - 在之前，我们打包的都是只有一个 ```.html``` 文件的应用，即 **单页面应用**
+        - 其中，**VUE** **React** 都是属于 单页面应用
+        - 所以，一般来说，webpack 在做打包的时候，绝大多数场景 都是对单页面应用打包
+        <br><br>
+        - 但是，在我们兼容老的项目的时候，却的确需要打包 **多页面应用**。如 jquery、zepto... 等的项目
+        - 那么，我们如何打包 **多页面应用** 呢？请看下面
+    - 2.多页面打包案例
+        比如说：我们现在有两个页面需要打包，分别是 index.html, list.html
+        ```js
+        // index.js
+        import React, { Component } from 'react';
+        import ReactDom from 'react-dom';
+
+        class App extends Component {
+            render() {
+                return (
+                    <div>
+                        <div>This is Home Page</div>
+                    </div>
+                );
+            }
+        }
+
+        ReactDom.render(<App />, document.getElementById('root'));
+        ```
+        ```js
+        // list.js
+        import React, { Component } from 'react';
+        import ReactDom from 'react-dom';
+
+        class App extends Component {
+            render() {
+                return (
+                    <div>
+                        <div>This is List Page</div>
+                    </div>
+                );
+            }
+        }
+
+        ReactDom.render(<App />, document.getElementById('root'));
+        ```
+        ```html
+        // index.html
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <title>Webpack 打包项目</title>
+        </head>
+        <body id="root">
+            
+        </body>
+        </html>
+        ```
+        ```js
+        // webpack.common.js
+        const path = require('path');
+        const fs = require('fs');
+        const HtmlWebpackPlugin = require('html-webpack-plugin');
+        const CleanWebpackPlugin = require('clean-webpack-plugin');
+        const AddAssetHtmlWebpackPlugin = require('add-asset-html-webpack-plugin');
+        const webpack = require('webpack');
+
+        const plugins = [
+            new HtmlWebpackPlugin({     // 笨办法，每增加一个页面，这里的入口就增加一条
+                template: 'src/index.html',
+                filename: 'index.html',   // 打包后的文件名
+                chunks: ['runtime', 'vendors', 'main']   // 需要引入的文件
+            }),
+            new HtmlWebpackPlugin({
+                template: 'src/index.html',
+                filename: 'list.html',
+                chunks: ['runtime', 'vendors', 'list']
+            }),
+            new CleanWebpackPlugin({
+                default: ['dist'],
+                root: path.resolve(__dirname, '../'),
+            }),
+        ];
+
+        const files = fs.readdirSync(path.resolve(__dirname, '../dll'));
+        files.forEach((file) => {
+            if (/.*\.dll.js/.test(file)) {
+                plugins.push(new AddAssetHtmlWebpackPlugin({
+                    filepath: path.resolve(__dirname, '../dll/', file),
+                }));
+            }
+            if (/.*\.manifest.json/.test(file)) {
+                plugins.push(new webpack.DllReferencePlugin({
+                    manifest: path.resolve(__dirname, '../dll/', file),
+                }));
+            }
+        });
+
+        module.exports = {
+            entry: {
+                main: './src/index.js',     // 笨办法，每增加一个页面，这里的入口就增加一条
+                list: './src/list.js'
+            },
+            module: {
+                rules: [{
+                test: /\.jsx?$/,
+                include: path.resolve(__dirname, '../src'),
+                loader: 'babel-loader',
+                }],
+            },
+            plugins,
+            optimization:{
+                runtimeChunk: {   // mainfest 独立打包成一个文件：runtime.js
+                    name: 'runtime'
+                },
+                usedExports: true,
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        vendors: {  // 第三方模块的内容，打包到叫 vendors 的文件中。但是前面react的文件，已经被打包到 react.dll.js 中了，所以这里不再被打包到 vendors 中
+                        test: /[\\/]node_modules[\\/]/,
+                        priority: -10,
+                        name: 'vendors'
+                        }
+                    }
+                }
+            },
+            output: {
+                filename: '[name].[contentHash].bundle.js',
+                path: path.resolve(__dirname, '../dist'),
+            }
+        };
+        ```
+        ```js
+        // webpack.prod.js
+        const merge = require('webpack-merge');
+        const commonConfig = require('./webpack.common.js');
+
+        const prodConfig = {
+        mode: 'production',
+            devtool: 'cheap-module-source-map',
+        };
+
+        module.exports = merge(commonConfig, prodConfig);
+        ```
+        ```js
+        // webpack.dll.js   // 主要目的是吧 react 单独打包成一个文件
+        const path = require('path');
+        const webpack = require('webpack');
+
+        module.exports = {
+            mode: 'production',
+            entry: {
+                react: ['react', 'react-dom'],
+            },
+            output: {
+                filename: '[name].[contentHash].dll.js',
+                path: path.resolve(__dirname, '../dll'),
+                library: '[name]',
+            },
+            plugins: [
+                new webpack.DllPlugin({
+                    name: '[name]',
+                    path: path.resolve(__dirname, '../dll/[name].manifest.json'),
+                }),
+            ],
+        };
+        ```
+        ```js
+        // .babelrc
+        {
+            "presets": [
+                [
+                    "@babel/preset-env", {
+                        "targets": {
+                            "chrome": "67"
+                        },
+                        "useBuiltIns": "usage",
+                        "corejs": "3"
+                    }
+                ],
+                "@babel/preset-react"
+            ]
+        }
+        ```
+        ```json
+        // package.json
+        {
+            "name": "5-13_package_multi_pages_application",
+            "version": "1.0.0",
+            "description": "",
+            "main": "index.js",
+            "scripts": {
+                "build": "webpack --config ./build/webpack.prod.js",
+                "dev": "webpack-dev-server --config ./build/webpack.dev.js",
+                "build:dll": "webpack --config ./build/webpack.dll.js"
+            },
+            "keywords": [],
+            "author": "",
+            "license": "ISC",
+            "devDependencies": {
+                "@babel/core": "^7.4.5",
+                "@babel/plugin-transform-runtime": "^7.4.4",
+                "@babel/preset-env": "^7.4.5",
+                "@babel/preset-react": "^7.0.0",
+                "@babel/runtime": "^7.4.5",
+                "@babel/runtime-corejs2": "^7.4.5",
+                "add-asset-html-webpack-plugin": "^3.1.3",
+                "babel-eslint": "^10.0.1",
+                "babel-loader": "^8.0.6",
+                "clean-webpack-plugin": "^2.0.2",
+                "eslint": "^5.16.0",
+                "eslint-config-airbnb": "^17.1.0",
+                "eslint-plugin-import": "^2.17.2",
+                "eslint-plugin-jsx-a11y": "^6.2.1",
+                "eslint-plugin-react": "^7.13.0",
+                "html-webpack-plugin": "^3.2.0",
+                "react-router-dom": "^5.0.0",
+                "webpack": "^4.32.2",
+                "webpack-cli": "^3.3.2",
+                "webpack-dev-server": "^3.4.1",
+                "webpack-merge": "^4.2.1"
+            },
+            "dependencies": {
+                "react": "^16.8.6",
+                "react-dom": "^16.8.6"
+            }
+        }
+
+        ```
+        - 这样配置完后，打包，即可生成 下面这样的 index.html。它会自动已引入 react runtime main 三个文件
+        ```html
+        // index.html
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <title>Webpack 打包项目</title>
+        </head>
+        <body id="root">
+            
+        <script type="text/javascript" src="react.b520cd3e841d93f8a53b.dll.js"></script>
+        <script type="text/javascript" src="runtime.c84a12333a1ea507cfb3.bundle.js"></script>
+        <script type="text/javascript" src="main.ec06a6b3ebb057ed5c8e.bundle.js"></script>
+        </body>
+        </html>
+        ```
+    - 3.优化方法，多页面打包案例
+        - 上面说到，上面的这种方法是笨办法，那么我们下面就来优化这种方式。
+        - 做到，只要修改入口文件module.exports.entry ，即可自动生成新的 html文件
+        ```js
+        // webpack.common.js
+        const path = require('path');
+        const fs = require('fs');
+        const HtmlWebpackPlugin = require('html-webpack-plugin');
+        const CleanWebpackPlugin = require('clean-webpack-plugin');
+        const AddAssetHtmlWebpackPlugin = require('add-asset-html-webpack-plugin');
+        const webpack = require('webpack');
+
+        const makePlugins = (configs) => {
+            const plugins = [
+                new CleanWebpackPlugin({
+                    default: ['dist'],
+                    root: path.resolve(__dirname, '../'),
+                })
+            ]
+
+            Object.keys(configs.entry).forEach(item => {
+                plugins.push(new HtmlWebpackPlugin({
+                    template: 'src/index.html',
+                    filename: `${item}.html`,
+                    chunks: ['runtime', 'vendors', item]
+                }))
+            })
+            
+            const files = fs.readdirSync(path.resolve(__dirname, '../dll'));
+            files.forEach((file) => {
+                if (/.*\.dll.js/.test(file)) {
+                    plugins.push(new AddAssetHtmlWebpackPlugin({
+                        filepath: path.resolve(__dirname, '../dll/', file),
+                    }));
+                }
+                if (/.*\.manifest.json/.test(file)) {
+                    plugins.push(new webpack.DllReferencePlugin({
+                        manifest: path.resolve(__dirname, '../dll/', file),
+                    }));
+                }
+            });
+
+            return plugins;
+        }
+
+        const configs = {
+            entry: {
+                index: './src/index.js',     // 笨办法，每增加一个页面，这里的入口就增加一条
+                list: './src/list.js'
+            },
+            module: {
+                rules: [{
+                    test: /\.jsx?$/,
+                    include: path.resolve(__dirname, '../src'),
+                    loader: 'babel-loader',
+                }],
+            },
+            optimization:{
+                runtimeChunk: {   // mainfest 独立打包成一个文件：runtime.js
+                    name: 'runtime'
+                },
+                usedExports: true,
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        vendors: {  // 第三方模块的内容，打包到叫 vendors 的文件中。但是前面react的文件，已经被打包到 react.dll.js 中了，所以这里不再被打包到 vendors 中
+                            test: /[\\/]node_modules[\\/]/,
+                            priority: -10,
+                            name: 'vendors'
+                        }
+                    }
+                }
+            },
+            output: {
+                filename: '[name].[contentHash].bundle.js',
+                path: path.resolve(__dirname, '../dist'),
+            },
+        };
+
+        configs.plugins = makePlugins(configs);
+
+        module.exports = configs;
+
+        ```
+
+
+
+[目前视频进度 《5-13 多页面打包配置》 完]()
