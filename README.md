@@ -4793,6 +4793,7 @@ webpack4 各种语法 入门讲解
         module.exports = configs;
 
         ```
+        - **核心思路**：通过 makePlugins() 方法，动态生成对应的 html-webpack-plugin ，从而生成对应的页面
 
 
 
