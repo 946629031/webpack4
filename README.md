@@ -37,9 +37,19 @@ webpack4 各种语法 入门讲解
     - [4-10 Webpack 与浏览器缓存（Caching）](#4-10-webpack-与浏览器缓存caching)
     - [4-11 Shimming 垫片 的作用](#4-11-shimming-垫片-的作用)
     - [4-12 环境变量的使用方法](#4-12-环境变量的使用方法)
-- [第5章 Webpack 实战配置案例讲解](#)
-    - [5-1 Library 的打包]()
-    - [5-2 PWA 的打包配置 (服务器挂掉依然能访问)]()
+- [第5章 Webpack 实战配置案例讲解](#第5章-webpack-实战配置案例讲解)
+    - [5-1 Library 的打包](#5-1-library-的打包自己开发一个库)
+    - [5-2 PWA 的打包配置 (服务器挂掉依然能访问)](#5-2-pwa-的打包配置-服务器挂掉依然能访问)
+    - [5-3 TypeScript 的打包配置](#5-3-typescript-的打包配置)
+    - [5-4 使用 WebpackDevServer.proxy 实现请求转发](#5-4-使用-webpackdevserverproxy-实现请求转发)
+    - [5-5 WebpackDevServer 解决单页面应用路由问题](#5-5-webpackdevserver-解决单页面应用路由问题)
+    - [5-6 EsLint 在 Webpack 中的配置](#5-6-eslint-在-webpack-中的配置)
+    - [5-8 Webpack 性能优化](#5-8-webpack-性能优化)
+    - [5-13 多页面打包配置](#5-13-多页面打包配置)
+- [第6章 Webpack 底层原理及脚手架工具分析]()
+    - [6-1 如何编写一个loader]()
+    - []()
+    - []()
 
 ----
 
@@ -4796,5 +4806,109 @@ webpack4 各种语法 入门讲解
         - **核心思路**：通过 makePlugins() 方法，动态生成对应的 html-webpack-plugin ，从而生成对应的页面
 
 
+## 第6章 Webpack 底层原理及脚手架工具分析
+- ### 6-1 如何编写一个loader
+    - 什么是loader？ 官方解释：loader 让 webpack 能够去处理其他类型的文件，并将它们转换为有效 模块，以供应用程序使用。
+    - 在这之前，我们使用过 ```css-loader style-loader sass-loader file-loader url-loader```
+    - 那么如果，在一些业务场景下，我需要自己编写一个 loader 该怎么做呢？这其实非常的简单
+    - #### 自定义 loader 项目
+        - 我们先来实现一个最简单的 loader
+        - 要求：当我们引入一个 js 文件，一但遇到 'dell' 字符串就替换成 'dellLee'
+        <br><br>
+        - 第一步
+            - 1.```npm init -y```
+            - 2.```npm i -D webpack webpack-cli```
+            ```
+            // 项目目录
+            make-loader
+                |- /node-modules
+                |- /src
+                    |- index.js
+                |- package.json
+                |- webpack.config.js
+            ```
+            ```js
+            // index.js
+            console.log('hello dell')
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
 
-[目前视频进度 《5-13 多页面打包配置》 完]()
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                },
+                output: {
+                    path: path.resolve(__dirname, 'dist'),
+                    filename: '[name].js'
+                }
+            }
+            ```
+            ```js
+            // package.json
+            {
+                "scripts": {
+                    "build": "webpack"
+                }
+            }
+            ```
+        - 到目前这里，执行 ```npm run build``` 即可成功打包出 main.js
+        - 第二步
+            ```
+            // 项目目录
+            make-loader
+                |- /loaders
+                    |- replaceLoader.js     // 新增 replaceLoader
+                |- /node-modules
+                |- /src
+                    |- index.js
+                |- package.json
+                |- webpack.config.js
+            ```
+            ```js
+            // replaceLoader.js
+            module.exports = function(source) {     // 这里不能写成箭头函数，原因如下
+                // source 是你引入文件的内容(源代码)
+                return source.replace('dell', 'dellLee')
+            }
+            ```
+            - 这里不能写成箭头函数，原因：webpack 在调用 loader 的时候，会把 this 做一些变更，变更之后呢 才能用 this 的一些方法。但是如果使用的是箭头函数，this 指向就会有问题，你就没办法使用 this 本来的一些方法了
+        - 第三步
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                },
+                module: {
+                    rules: [{
+                        test: /\.js/,
+                        // use: ['replace-loader']  // 在过去，我们是这样写的。但是我们自定义的 loader 却不能这样写
+                        use: [
+                            path.resolve(__dirname, './loaders/replaceLoader.js')
+                        ]
+                    }]
+                },
+                output: {
+                    path: path.resolve(__dirname, 'dist'),
+                    filename: '[name].js'
+                }
+            }
+            ```
+        - 执行逻辑
+            - 1.这时候，entry 的入口文件，有一个 index.js 符合 module.rules.test 规则的文件。
+            - 2.那么，这个 index.js 文件，就会执行这个 loader ```path.resolve(__dirname, './loaders/replaceLoader.js')```
+            - 3.那么，上面 replaceLoader.js 文件里的 source 所接收到的内容，就是 index.js 的内容
+            - 4.所以，只要遇到了 'dell' 字符串就替换成 'dellLee'
+            - 5.替换过后，就把替换好的结果，输出到 output 的文件中
+        - 第四步
+            - 执行打包，验证代码
+            - 这时候，打包输出的 ```main.js``` 里面 ```console.log('hello dell')``` 就变成了 ```console.log('hello dellLee')``` 了
+
+
+[11:16]()
