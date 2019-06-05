@@ -6,6 +6,8 @@ webpack4 各种语法 入门讲解
 
 看视频整理要点笔记：
 
+> 前言：由于技术更迭速度快，在这篇文章写完后，其中的某些细节、api  可能已经不适用了。但是，我们学编程，不是学的细节，而是学的思路。只要把握好主干思路，就能解决问题。
+
 ----
 
 **目录**
@@ -4811,7 +4813,7 @@ webpack4 各种语法 入门讲解
     - 什么是loader？ 官方解释：loader 让 webpack 能够去处理其他类型的文件，并将它们转换为有效 模块，以供应用程序使用。
     - 在这之前，我们使用过 ```css-loader style-loader sass-loader file-loader url-loader```
     - 那么如果，在一些业务场景下，我需要自己编写一个 loader 该怎么做呢？这其实非常的简单
-    - #### 自定义 loader 项目
+    - #### 1.如何编写一个 loader ？
         - 我们先来实现一个最简单的 loader
         - 要求：当我们引入一个 js 文件，一但遇到 'dell' 字符串就替换成 'dellLee'
         <br><br>
@@ -4910,5 +4912,114 @@ webpack4 各种语法 入门讲解
             - 执行打包，验证代码
             - 这时候，打包输出的 ```main.js``` 里面 ```console.log('hello dell')``` 就变成了 ```console.log('hello dellLee')``` 了
 
+    - #### 2. loader 的更多配置选项
+        - [Loader Api 官方文档](https://webpack.js.org/api/loaders)
+        - 到目前为止，我们已经实现了一个最简易的 loader
+        - 那么，我们如何给 loader 添加更多配置选项呢？看下面
+        - 1.通过 this.query 的方式接收 options 里的参数
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                },
+                module: {
+                    rules: [{
+                        test: /\.js/,
+                        use: [
+                            {   // 上面例子中，我们这里写的是字符串，但是也可以写成对象，来增加配置选项
+                                loader: path.resolve(__dirname, './loaders/replaceLoader.js'),
+                                options: {
+                                    name: 'leexx'
+                                }
+                            }
+                        ]
+                    }]
+                },
+                output: {
+                    path: path.resolve(__dirname, 'dist'),
+                    filename: '[name].js'
+                }
+            }
+            ```
+            ```js
+            // replaceLoader.js
+            module.exports = function(source) {
+                console.log(this.query)     // 通过 this.query 的方式接收 options 里的参数
+                // return source.replace('dell', 'dellLee')
+                return source.replace('dell', this.query.name)  // 所以 也可以改成这种更灵活的方式
+            }
+            ```
+            - 执行打包命令，验证结果。看输出的 main.js 里面的 'dell' 是否被替换为了 leexx (this.query.name)
+        - 2.通过 ```loader-utils``` 取给定 loader 的 option。
+            - 当 options 里的参数，是一个字符串，而不是一个对象时
+            - ```this.query``` 就是一个以 ``` ? ``` 开头的字符串。
+            - 这时候，就只能 通过 ```loader-utils``` 取给定 loader 的 option。
+            - 1.安装 ```npm i -D loader-utils```
+            ```js
+            // replaceLoader.js
+            const loaderUtils = require('loader-utils')
+
+            module.exports = function(source) {
+                const options = loaderUtils.getOptions(this)    // 通过 loader-utils 取 option
+                console.log(options)    // { leexxxxxxx1: true }
+                return source.replace('dell', Object.keys(options))
+            }
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                },
+                module: {
+                    rules: [{
+                        test: /\.js/,
+                        use: [
+                            {
+                                loader: path.resolve(__dirname, './loaders/replaceLoader.js'),
+                                options: 'leexxxxxxx1'
+                                // query: 'leexxxxxxx1'   // 写成 options 或者 query 都可以
+                            }
+                        ]
+                    }]
+                },
+                output: {
+                    path: path.resolve(__dirname, 'dist'),
+                    filename: '[name].js'
+                }
+            }
+            ```
+
+        - 3.```this.callback```
+            - ```this.callback``` 是干嘛的呢？
+                - 在上面的例子中，```replaceLoader.js``` 接收到了源代码，只能对源代码进行处理
+                - 但是有时候，我需要用到 ````SourceMap````; 或者 有时候，我需要 返回源代码的时候，把```SourceMap``` 也带回去
+                - 但是，问题来了，向上面两个小节中介绍的，```return``` 方法，只能返回一个参数，其他东西就带不出去
+                - 那么，这时候，我们就可以通过 ```this.callback``` 额外把 ```SourceMap``` 给带出去
+            - ```this.callback``` 预期的参数
+                ```js
+                this.callback(
+                    err: Error | null,
+                    content: string | Buffer,   // return 的源码
+                    sourceMap?: SourceMap,      // 如果有 sourceMap 就可以写上
+                    meta?: any                  // 如果想往外传递的 额外信息
+                );
+                ```
+            - How to use? 怎么用？
+                ```js
+                // replaceLoader.js
+                module.exports = function(source) {
+                    const result = source.replace('dell', this.query.name)  // 将之前处理好的源码  存在变量中
+                    this.callback(null, result, source, mata)  // 如果有 source mata 的话
+                    // this.callback(null, result)             // 如果没有
+                }
+                ```
 
 [11:16]()
