@@ -4948,7 +4948,8 @@ webpack4 各种语法 入门讲解
             ```js
             // replaceLoader.js
             module.exports = function(source) {
-                console.log(this.query)     // 通过 this.query 的方式接收 options 里的参数
+                console.log(this.query)     // 通过 this.query 的方式接收 options 里的参数  { name: 'leexxxxx' }
+
                 // return source.replace('dell', 'dellLee')
                 return source.replace('dell', this.query.name)  // 所以 也可以改成这种更灵活的方式
             }
@@ -5021,5 +5022,174 @@ webpack4 各种语法 入门讲解
                     // this.callback(null, result)             // 如果没有
                 }
                 ```
+        - ##### 4.Loader 异步回调 this.async
+            - 那如果我这样改写
+                ```js
+                // replaceLoader.js
+                const loaderUtils = require('loader-utils')
 
-[11:16]()
+                module.exports = function(source) {
+                    const options = loaderUtils.getOptions(this)
+
+                    setTimeout(() => {
+                        const result = source.replace('dell', options.name)
+                        return result
+                    }, 1000)
+                }
+                ```
+                - 如果我这样改写，执行打包时，就会报错，说："打包报错，因为 loader 没有返回内容"
+                - 报错原因：因为执行这个 loader 的时候，它从上到下执行，执行完后要等一秒才会 ```return result``` 。但是，他一开始执行完的时候，并没有及时 ```return``` 结果出去，所以报错了。
+                - 所以，如果我们 loader 里面要写一些异步的东西，我们该怎么处理呢？
+            - Loader 异步回调 this.async
+                ```js
+                // replaceLoader.js
+                const loaderUtils = require('loader-utils')
+
+                module.exports = function(source) {
+                    const options = loaderUtils.getOptions(this)
+                    const callback = this.async() // loader 将会异步地回调。返回 this.callback
+
+                    setTimeout(() => {
+                        const result = source.replace('dell', options.name)
+                        // return result
+                        callback(null, result)  // 由于 callback 返回的内容实际上是 this.callback 所以，参数就是 this.callback 规定的参数
+                    }, 1000)
+                }
+                ```
+        - ##### 5.多个 loader 如何使用
+            - 要求：使用两个 loader，把业务代码中的所有 'dell'，使用第一个 loader 替换为 'leexxxxx'，然后在使用第二个 loader 将 'leexxxxx' 替换为 'world'
+            ```
+            // 项目目录
+            make-loader
+                |- /loaders
+                    |- replaceLoader.js
+                    |- replaceLoaderAsync.js     // 新增 replaceLoaderAsync
+                |- /node-modules
+                |- /src
+                    |- index.js
+                |- package.json
+                |- webpack.config.js
+            ```
+            ```js
+            // replaceLoaderAsync.js
+            const loaderUtils = require('loader-utils')
+
+            module.exports = function(source) {
+                const options = loaderUtils.getOptions(this)
+                const callback = this.async()
+
+                setTimeout(() => {
+                    const result = source.replace('dell', options.name)
+                    callback(null, result)
+                }, 1000)
+            }
+            ```
+            ```js
+            // replaceLoaderAsync.js
+            module.exports = function(source) {
+                return source.replace('leexxxxx', 'world')
+            }
+            ```
+            ```js
+            // index.js
+            console.log('hello dell')
+            ```
+            ```js
+            // webpack.config.js
+            const path = require('path')
+
+            module.exports = {
+                mode: 'development',
+                entry: {
+                    main: './src/index.js'
+                },
+                module:{
+                    rules: [{
+                        test: /\.js/,
+                        use: [  // loader 的使用顺序是 从下到上，从右到左
+                            {
+                                loader: path.resolve(__dirname, './loaders/replaceLoader.js')
+                            },
+                            {
+                                loader: path.resolve(__dirname, './loaders/replaceLoaderAsync.js'),
+                                options: {
+                                    name: 'leexxxxx'
+                                }
+                            }
+                        ]
+                    }]
+                },
+                output: {
+                    filename: '[name].bundle.js',
+                    path: path.resolve(__dirname, 'dist')
+                }
+            }
+            ```
+            - 优化写法
+                ```js
+                // webpack.config.js
+                const path = require('path')
+
+                module.exports = {
+                    mode: 'development',
+                    entry: {
+                        main: './src/index.js'
+                    },
+                    resolveLoader: {   // 如果你引用一个 loader 的时候，会先到 'node_modules' 里面找，如果没有，就会再到 './loaders' 里面找
+                        modules: ['node_modules', './loaders']
+                    },
+                    module:{
+                        rules: [{
+                            test: /\.js/,
+                            use: [
+                                {
+                                    loader: 'replaceLoader'
+                                },
+                                {
+                                    loader: 'replaceLoaderAsync',
+                                    options: {
+                                        name: 'leexxxxx'
+                                    }
+                                }
+                            ]
+                        }]
+                    },
+                    output: {
+                        filename: '[name].bundle.js',
+                        path: path.resolve(__dirname, 'dist')
+                    }
+                }
+                ```
+
+        - 6.自己编写 loader 的好处
+            - 1.**前端代码异常捕获**
+                - 前两年，我在写 jquery 代码的时候，要做 **前端代码异常监控**，这时候就需要对代码做 **异常捕获**，所以我需要对 jquery 底层源码做修改，在里面做一些 try catch 这样的语法。同时对业务代码，我也要做一些 try catch 来捕获 **代码的异常**，发现异常了 就实时报到线上，去实时预警。所以，这种 **异常检测的代码** 就要嵌入你的业务代码之中，所以有时候，你的代码看起来就比较乱、比较差。
+                - 但是有了 webpack 之后，我就不用这么做了。我可以写一个loader，分析里面拿到的源码 source，如果遇到 function，就把function 放在 ```try{ }catch(e)``` 里面执行，如果有异常就能捕获到。
+                    ```js
+                    // loaderDemo.js
+                    module.exports = function(source) {
+                        try{function(){     // 伪代码，实际实现更复杂点
+
+                        }}catch(e)
+                    }
+                    ```
+                - 如果你在 webpack 里面这样做 **异常捕获** 的话，你的业务代码 **不需要做任何的改变**，而你只需要写这么一个 loader，那么业务代码里所有的 异常都能捕获得到。
+            - 2.**通过 Loader 做语言切换**
+                - 如果网站面向多国客户，有时候要出英文版，有时候要出中文版
+                - 这时候，我们就可以把一些中英文的内容 放在一些占位符里面去写，比如说
+                ```js
+                // index.js
+                console.log('{{title}}')
+                ```
+                ```js
+                // loaderDemo.js
+                module.exports = function(source) {
+                    if(Node全局变量 === '中文') {
+                        source.replace('{{title}}', '中文标题')
+                    }else{
+                        source.replace('{{title}}', 'English title')
+                    }
+                }
+                ```
+                - 这样的话，我们就能通过一个loader，实现自动的语言切换
+            - 3.等等..  loader 能解决很多问题
