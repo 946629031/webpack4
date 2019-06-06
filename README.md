@@ -5193,3 +5193,190 @@ webpack4 各种语法 入门讲解
                 ```
                 - 这样的话，我们就能通过一个loader，实现自动的语言切换
             - 3.等等..  loader 能解决很多问题
+- ### 6-3 如何编写一个 Plugin
+    - 什么是 Loader ?
+        - 当我们在项目中，引入一个js文件，或其他格式文件
+        - 这时候，我们可以借助 Loader 来处理 我们引用的这个文件
+        - Loader 帮助我们处理模块
+    - 什么是 Plugin ?
+        - Plugin 什么时候生效呢？
+        - 当我们在打包的时候，在某些具体时刻上，执行 Plugin
+        - 比如说，在打包结束之后，我要自动生成一个 .html 文件，这时候，我们就可以使用 ```html-webpack-plugin``` 插件
+        - 再比如说，在打包之前，我要把 dist 目录清空，这时候，我们可以使用 ```clean-webpack-plugin```
+        - 在我们打包过程中的某些时刻，你想要做某些事情，这时候是插件生效的场景。(有点类似于Vue的生命周期钩子)
+    - Webpack 源码里，有80%都是通过 plugin 机制来编写的。随着 plugin 越来越多，webpack 能做的事情也就越来越多。可以说，plugin 是 webpack 的灵魂
+    - 对于 Webpack 插件来说，它的核心机制是 **事件驱动**，或者说是 **发布订阅** 设计模式。在这个设计模式里，代码的执行，是 **通过事件来驱动的**。
+    <br><br>
+    - 1.下面我们开始, 编写一个简单Plugin
+        - 0.插件实现需求：
+            - 当打包结束的时候，在 dist 目录下，生成一个版权文件，比如说叫做 ```copyright.txt``` ，里面写一些版权信息
+        - 1.新建项目, ```npm init -y```
+        - 2.```npm i -D webpack webpack-cli```
+        ```
+        webpack-demo
+            |- /node_modules
+            |- /src
+                |- index.js
+            |- package.json
+            |- webpack.config.js
+        ```
+        ```js
+        // index.js
+        console.log('hello world')
+        ```
+        ```js
+        // package.json
+        {
+            "scripts": {
+                "build": "webpack"
+            }
+        }
+        ```
+        ```js
+        // webpack.config.js
+        const path = require('path')
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'
+            },
+            output: {
+                path: path.resolve(__dirname, 'dist'),
+                filename: '[name].bundle.js'
+            }
+        }
+        ```
+        - 3.执行 ```npm run build``` 验证项目，确认没有错误
+        ```
+        webpack-demo
+            |- /node_modules
+            |- /plugins
+                |- copyright-webpack-plugin.js  // 新建文件
+            |- /src
+                |- index.js
+            |- package.json
+            |- webpack.config.js
+        ```
+        - plugin 跟 loader 的定义形式不一样。loader 是一个函数，plugin 是一个类
+        ```js
+        // webpack.config.js
+        const path = require('path')
+        const CopyrightWebpackPlugin = require('./plugins/copyright-webpack-plugin')
+        // 引入 CopyrightWebpackPlugin 插件
+
+        module.exports = {
+            mode: 'development',
+            entry: {
+                main: './src/index.js'
+            },
+            plugins: [
+                new CopyrightWebpackPlugin({
+                    name: 'dell'    // 此处的参数会传入到 类的construtor 的参数 options 中
+                })  // 实例化插件。为什么插件都要new? 因为插件都是一个类
+            ]
+            output: {
+                path: path.resolve(__dirname, 'dist'),
+                filename: '[name].bundle.js'
+            }
+        }
+        ```
+        ```js
+        // copyright-webpack-plugin.js
+        class CopyrigthWebpackPlugin{
+            constructor(options) {  // 如果该插件不需要接收参数，可以不用写 constructor()
+                console.log(options)   // 此处会被打印在打包时的命令行上
+                console.log('插件执行了')
+            }
+
+            apply(compiler) {   // 当你调用这个插件的时候，会执行这个 apply() 方法，其中 compiler 可以理解成是webpack 的实例
+
+            }
+        }
+
+        module.exports = CopyrightWebpackPlugin;
+        ```
+        - 执行打包 ```npm run build``` 验证代码的正确性，看是否能 console.log('插件执行了')
+
+        - **下面讲解核心部分**
+            - 当你调用这个插件的时候，会执行这个 apply() 方法
+            - 其中 compiler 是 webpack 的实例
+            - 这个实例 里存储了，我们webpack 的各种各样的 配置文件，打包的过程，...等等一些列的内容
+            - 我们可以通过 compiler 实现我们想要的效果
+            - compiler 里面有什么东西？可以查看 [Compiler Hooks api 官方文档](https://webpack.js.org/api/compiler-hooks)
+                - compiler.hooks.emit   把东西都打包好，准备输出到 ouput 目录之前的时刻
+            - compiler 和 compilation 的区别
+                - compiler 存放着，配置的所有内容(webpack.config.js)，包括打包的所有相关内容
+                - compilation 存放着，只是跟这一次打包相关的内容
+            ```js
+            // copyright-webpack-plugin.js
+            class CopyrightWebpackPlugin{
+                apply(compiler) {
+                    // 同步时刻(SyncHook)，不需要callback
+                    compiler.hooks.compile.tap('CopyrightWebpackPlugin', (compilation) => {
+                        console.log('compiler')
+                    })
+
+                    // 异步时刻(AsyncSeriesHook)，需要callback
+                    compiler.hooks.emit.tapAsync('CopyrightWebpackPlugin', (compilation, callback) => {   // 意思是：当我把打包结果放到 output 目录前，就会执行这个函数
+                        console.log(123123)
+                        console.log(compilation.assets)  // 打包内容有哪些，在放在 compilation.assets 里面的
+                        compilation.assets['copyright.txt'] = {
+                            source: function() {
+                                return 'copyright bu dell lee'
+                            },
+                            size: function() {  // 表示我这个文件大小是 21个字符长度
+                                return 21   // 上面 source 函数返回字符串的字节数
+                            }
+                        }
+                        callback()  // 如果使用 tapAsync() 函数，最后一定要执行一下 callback() 函数
+                    })
+                }
+            }
+
+            module.exports = CopyrightWebpackPlugin;
+            ```
+        - #### node 调试工具
+            - 问题：
+                - 到这里，上面 compilation.assets 你怎么知道 compilation 里面有 assets 这个属性呢？ 难道通 console.log(compilation) 这种方法吗？ 打印这种方法并不够直观
+            ```js
+            // package.json
+            {
+                "scripts": {
+                    "debug": "node --inspect --inspect-brk node_modules/webpack/bin/webpack.js",
+                    "build": "webpack"
+                }
+            }
+            ```
+            - ```node node_modules/webpack/bin/webpack.js``` 和 ```webpack``` 这两天命令干的事情是一模一样的
+            - ```"node --inspect --inspect-brk node_modules/webpack/bin/webpack.js"```
+                - ```--inspect``` 开启调试工具
+                - ```--inspect-brk``` 在第一行上打一个断点
+            - 执行命令 ```npm run debug```
+            - 然后在 chrome 浏览器，打开控制台，会控制台左侧看到一个绿色的 node图标，点击图标，即可进入node调试界面
+            - 在我们做 plugin 开发的时候，需要对 plugin 做调试的时候，在插件代码里写 ```debugger;``` 来手动打断点
+            ```js
+            // copyright-webpack-plugin.js
+            class CopyrightWebpackPlugin{
+                apply(compiler) {
+                    compiler.hooks.emit.tapAsync('CopyrightWebpackPlugin', (compilation, callback) => {
+                        debugger;  // 打断点
+                        compilation.assets['copyright.txt'] = {
+                            source: function() {
+                                return 'copyright bu dell lee'
+                            },
+                            size: function() {
+                                return 21
+                            }
+                        }
+                        callback()
+                    })
+                }
+            }
+
+            module.exports = CopyrightWebpackPlugin;
+            ```
+            - 打了断点后，再执行命令 ```npm run debug```，然后点击播放按钮(f8)，即可跳到下一个端点处
+            - 这时候，鼠标hover上去，或者在右边的 watch面板 添加 compilation，即可查看它有什么属性了
+            - 实际上，我们在编写插件的时候，就是基于 node 调试工具，来编写的
+
