@@ -5338,6 +5338,7 @@ webpack4 各种语法 入门讲解
             module.exports = CopyrightWebpackPlugin;
             ```
         - #### node 调试工具
+            - [【慕课网】 Chrome 调试工具讲解 node.js调试入门](https://www.imooc.com/learn/1093)
             - 问题：
                 - 到这里，上面 compilation.assets 你怎么知道 compilation 里面有 assets 这个属性呢？ 难道通 console.log(compilation) 这种方法吗？ 打印这种方法并不够直观
             ```js
