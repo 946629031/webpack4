@@ -1348,6 +1348,12 @@ webpack4 各种语法 入门讲解
     ```
 ## 第4章 Webpack 的高级概念
 - ### 4-1 Tree Shaking 概念详解
+    - 0.参考文章
+        - [你的Tree-Shaking并没什么卵用（webpack@3;babel@6）【github】](https://github.com/frontend9/fe9-library/issues/81)
+        - [Tree-Shaking性能优化实践 - 原理篇 【掘金 百度】](https://juejin.im/post/5a4dc842518825698e7279a9)
+        - [Tree-Shaking性能优化实践 - 实践篇 【掘金 百度】](https://juejin.im/post/5a4dca1d518825128654fa78)
+            - [babel-plugin-import-fix ，缩小引用范围](https://github.com/lin-xi/babel-plugin-import-fix)
+            - 当我们使用组件库的时候，import {Button} from 'element-ui'，相对于Vue.use(elementUI)，已经是具有性能意识，是比较推荐的做法，但如果我们写成右边的形式，具体到文件的引用，打包之后的区别是非常大的，以antd为例，右边形式bundle体积减少约80%。
     - 1.什么是 ```Tree Shaking``` ?
         - 中文译名：摇树       （好像翻译有点生硬(　＾∀＾)）
         - ```Tree Shaking``` 是干嘛的？
@@ -1870,6 +1876,7 @@ webpack4 各种语法 入门讲解
                 - ```npm run dev```
                 - ```npm run build```
 - ### 4-3 ```Code Splitting``` 代码分割
+    - 传送门：[解决vue打包后vendor.js文件过大问题, externals, webpack3 拆包 CommonsChunkPlugin](https://github.com/946629031/Vue.js#externals-%E8%A7%A3%E5%86%B3vue%E6%89%93%E5%8C%85%E5%90%8Evendorjs%E6%96%87%E4%BB%B6%E8%BF%87%E5%A4%A7%E9%97%AE%E9%A2%98---%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95%E4%B8%80)
     - #### 代码分割 总结：
         - 1.代码分割，和 Webpack 无关
         - 2.Webpack 中实现代码分割，有两中方式
