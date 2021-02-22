@@ -2215,10 +2215,11 @@ webpack4 各种语法 入门讲解
         })
         ```
 
-- ### 4-8 ```Bundle Analysis``` 打包分析，```Prefetching``` 预取，```Preloading``` 预加载
-    [```Bundle Analysis```， ```Prefetching```， ```Preloading``` webpack官网讲解](https://webpack.js.org/guides/code-splitting#prefetchingpreloading-modules)
+- ### 4-8 `Bundle Analysis` 打包分析，`Prefetching` 预取，`Preloading` 预加载
+    [`Bundle Analysis`， `Prefetching`， `Preloading` webpack官网讲解](https://webpack.js.org/guides/code-splitting#prefetchingpreloading-modules)
     - #### 1.```Bundle Analysis``` 打包分析
         [webpack/analyse 官网](https://github.com/webpack/analyse)
+        - 0.安装 `webpack-bundle-analyzer`
         - 1.要做打包分析的前提，是要先生成一个 **打包过程的描述文件**
             - 打包命名内加一条这个，```webpack --profile --json > stats.js```
             ```js
