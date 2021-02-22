@@ -102,6 +102,13 @@ npm i webpack --registry=https://registry.npm.taobao.org  // 淘宝镜像
     - Webpack 文件上传github仓库
         - 一般情况下，都会把项目中的 node_modules文件夹 删除
          - ```npm install``` 可以自动把项目依赖包下载好
+    > [npm -i 与npm install -s与-d的区别](https://blog.csdn.net/u012967454/article/details/87098324) <br><br>
+    > i 是install 的简写 <br>
+    > -D 就是– save-dev 的简写 <br>
+    > -S 就是 –save 的简写 <br><br>
+    > 1.在 package.json 文件里面提现出来的区别就是，使用 --save-dev 安装的 插件，被写入到 devDependencies 对象里面去，而使用 --save 安装的插件，责被写入到 dependencies 对象里面去。 <br>
+    > 2.那 package.json 文件里面的 devDependencies 和 dependencies 对象有什么区别呢？ <br>
+    > 3.devDependencies 里面的插件只用于开发环境，不用于生产环境，而 dependencies 是需要发布到生产环境的。 <br>
 - 2-4 使用webpack的配置文件
     - ```npx webpack index.js```
         - 这条命令，实际上是使用webpack的默认配置，且入口文件是index.js
