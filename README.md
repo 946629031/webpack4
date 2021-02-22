@@ -8,6 +8,9 @@ webpack4 各种语法 入门讲解
 
 > 前言：由于技术更迭速度快，在这篇文章写完后，其中的某些细节、api  可能已经不适用了。但是，我们学编程，不是学的细节，而是学的思路。只要把握好主干思路，就能解决问题。
 
+```
+npm i webpack --registry=https://registry.npm.taobao.org  // 淘宝镜像
+```
 ----
 
 **目录**
@@ -48,11 +51,22 @@ webpack4 各种语法 入门讲解
     - [5-6 EsLint 在 Webpack 中的配置](#5-6-eslint-在-webpack-中的配置)
     - [5-8 Webpack 性能优化](#5-8-webpack-性能优化)
     - [5-13 多页面打包配置](#5-13-多页面打包配置)
-- [第6章 Webpack 底层原理及脚手架工具分析]()
-    - [6-1 如何编写一个loader]()
+- [第6章 Webpack 底层原理及脚手架工具分析](#第6章-webpack-底层原理及脚手架工具分析)
+    - [6-1 如何编写一个loader](#6-1-如何编写一个loader)
     - [6-3 如何编写一个 Plugin](#6-3-如何编写一个-plugin)
-    - []()
+    - ------
+    以下暂无笔记
+    - [6-4 Bundler 源码编写（模块分析 1）](#6-4-Bundler-源码编写（模块分析-1）)
+    - [6-5 Bundler 源码编写（模块分析 2）](#6-5-Bundler-源码编写（模块分析-2）)
+    - [6-6 Bundler 源码编写（ Dependencies Graph ）](#6-6-Bundler-源码编写（-Dependencies-Graph-）)
+    - [6-7 Bundler 源码编写（ 生成代码 ）](#6-7-Bundler-源码编写（-生成代码-）)
+- [第7章 Create-React-App 和 Vue-Cli 3.0脚手架工具配置分析](#第7章-Create-React-App-和-Vue-Cli-3.0脚手架工具配置分析)
+    - [7-1 通过 CreateReactApp 深入学习 Webpack 配置（1）](#7-1-通过-CreateReactApp-深入学习-Webpack-配置（1）)
+    - [7-2 通过 CreateReactApp 深入学习 Webpack 配置（2）](#7-2-通过-CreateReactApp-深入学习-Webpack-配置（2）)
+    - [7-3 Vue CLI 3 的配置方法及课程总结（1）](#7-3-Vue-CLI-3-的配置方法及课程总结（1）)
+    - [7-4 Vue CLI 3 的配置方法及课程总结（2）](#7-4-Vue-CLI-3-的配置方法及课程总结（2）)
 
+<br><br><br>
 ----
 
 ## 第1章 为什么会出现webpack?
@@ -92,7 +106,7 @@ webpack4 各种语法 入门讲解
     - ```npx webpack index.js```
         - 这条命令，实际上是使用webpack的默认配置，且入口文件是index.js
     - webpack.config.js 配置文件
-        - 当配置文件 配置好后，打包命令为：npx webpack
+        - 当配置文件 配置好后，打包命令为：`npx webpack`
         ```js
             const path = require('path')
 
@@ -119,19 +133,23 @@ webpack4 各种语法 入门讲解
            |- package.json
            |- index.html
         ```
-    - npm run bundle 打包命令
+    - `npm run bundle` 打包命令
         - 问题：如何自定义打包命令的名称呢？例如把打包命令改成```npm run bundle```，而不是```npx webpack```
         - 在 package.json 文件中
             ```js
             ...
             "scripts": {
                 "bundle": "webpack"
+                // "bundle": "webpack --config webpack.config.js" // 默认配置 // 完全等价于上面
             }
             ...
             ```
-            npm script 中的'webpack'会优先到本地(局部)的node_modules中查找webpack模块，如果没有才会去全局中查找
+            - 由于 webpack 的默认配置文件名称是 `webpack.config.js`，且 webpack 的默认配置 指向 `webpack.config.js`
+                - 所以 `"bundle": "webpack"` 完全等价于 `"bundle": "webpack --config webpack.config.js"`
+            - npm script 中的'webpack'会优先到本地(局部)的node_modules中查找webpack模块，如果没有才会去全局中查找
     - 手动指定配置文件
         - ```npx webpack --config config_file_name.js```
+    - 也可以在命令行中 直接执行 `webpack` 使用默认配置文件打包
 
 ## 第3章 Webpack 的核心概念
 - ### 3-1 什么是loader
@@ -890,7 +908,8 @@ webpack4 各种语法 入门讲解
                 entry: './src/index.js',
                 devServer: {
                     contentBase: './dist',   // 借助devServer起一个服务器，根路径为'./dist'
-                    open: true      // 自动打开浏览器，并访问 http://localhost:8080
+                    open: true,      // 自动打开浏览器，并访问 http://localhost:8080
+                    port: 8080       // 默认为 8080
                 },
                 output: {
                     filename: 'bundle.js',
@@ -904,16 +923,16 @@ webpack4 各种语法 入门讲解
                 ...
                 "scripts": {
                     "watch" : "webpack --watch",
-                    "start" : "webpack-dev-server",
+                    "dev" : "webpack-dev-server",
                     // "bundle": "webpack"
                 }
                 ...
             }
             ```
-        - 3.执行脚本 ```npm run start```
-            - 这时候 ```webpack-dev-server``` 就开启了本地服务器 ```http://localhost:8080```
+        - 3.执行脚本 `npm run dev` 或者 `npx webpack-dev-server`
+            - 这时候 `webpack-dev-server` 就开启了本地服务器 `http://localhost:8080`
             - 而且监听入口文件，自动打包
-    - 手动写一个 ```webpackDevServer``` （了解即可）
+    - 手写一个 `webpackDevServer` （了解即可）
         - 配置
             ```js
             // server.js
@@ -1095,18 +1114,51 @@ webpack4 各种语法 入门讲解
 
 - ### 3-11 使用 ```Babel``` 处理 ES6 语法
     - [Babel 官网](https://babeljs.io/setup#installation)
-    - 1.安装 ```npm install --save-dev babel-loader @babel/core```
-    - 2.```npm i -D @babel/preset-env```
-        - 为什么还要安装 @babel/preset-env 呢？实际上 babel-loader 只是 webpack和babel 的通信桥梁，而 ```@babel/preset-env``` 才能 ES6 转成 ES5
-    - 3.配置
+    - 什么是 babel ？
+        - babel 是用来做 ES 语法，从高版本 转译成 低版本 的一个工具
+        - 它不是 webpack 的一部分，只是 babel 可以提供一些 api，插件 可以用于 webpack 而已
+    - 为什么要用 babel ？
+        - 浏览器不完全支持 ES6 语法，更别说 ES7，ES8 了
+        - 但是 新语法 又特别好用，对于开发者来说 特别友好。这时候 就需要 Babel 来做一个 从高版本 转成 低版本的工作
+    - 测试用例
+        - 在没有使用 babel 转译时，先执行下面代码
+        ```js
+        // /src/index.js
+
+        const sum = (a, b) => {
+            return a + b
+        }
+
+        console.log(sum(10, 20))
+        ```
+        执行打包后，在 `index.bundle.js` 底部找到 对应的 箭头函数，仍然是 ES6的箭头函数 没有转译
+        ```js
+        // /dist/index.bundle.js
+        eval("const sum = (a, b) => {...}")
+        ```
+        最后，再去验证一下 开头 那个 E6转ES5 的测试用例，是否能够成功转译
+
+    - 1.安装 3个东西 `babel-loader`， `@babel/core`， `@babel/preset-env`
+        ```
+        npm install --save-dev babel-loader @babel/core @babel/preset-env
+        ```
+        - 问题1：为什么还要安装 @babel/preset-env 呢？
+            - 实际上 babel-loader 只是 webpack和babel 的通信桥梁，而 ```@babel/preset-env``` 才能 ES6 转成 ES5
+        - 问题2：安装命令里的 `@` 符合是什么意思？
+            - `npm install @babel/preset-env` 里的 `@` 表示 `组` 的意思，后面的 `/` 斜线表示 组下面的 某个模块
+            - 连起来的意思是 `安装 babel组 下面的 preset-env 这个模块`
+    - 2.配置
         ```js
         // webpack.config.js
+
+        // 主要 babel 配置
         module:{
             rules:[
                 test: /\.js$/, 
                 exclude: /node_modules/,  // 排除 node_modules 目录的文件
                 // include: path.resolve(__dirname, '../src'),
                 // 除了可以用 exclude，还可以用 include 意思是只有在 src 目录下的文件才执行 babel-loader
+                include: path.join(__dirname, 'src'), // 包括目录
                 loader: "babel-loader",
                 options: {
                     presets: ["@babel/preset-env"]
@@ -1114,8 +1166,52 @@ webpack4 各种语法 入门讲解
             ]
         }
         ```
-    - 4.在 ```webpack.config.js```中 module.rules 增加 ```options: { presets: ["@babel/preset-env"] }```
-    - 5.```polyfill```
+        ```js
+        // /webpack.config.js 完整配置
+
+        const path = require('path')
+        const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+        module.exports = {
+            mode: 'development', // development, production
+            entry: {
+                main: path.join(__dirname, 'src', 'index.js')
+            },
+            output: {
+                filename: '[name].bundle.js',
+                path: path.join(__dirname, 'dist')
+            },
+            devServer: {
+                port: 3000,
+                contentBase: path.join(__dirname, 'dist'),
+                open: true
+            },
+            plugins: [
+                new HtmlWebpackPlugin({
+                    template: path.join(__dirname, '/src/index.html')
+                })
+            ],
+            module: {
+                rules: [{
+                    test: /\.js$/,
+                    exclude: /node_modules/,
+                    include: path.join(__dirname, 'src'),
+                    loader: 'babel-loader'
+                }]
+            }
+        }
+        ```
+        ```js
+        // /.babelrc
+        {
+            "presets": ["@babel/preset-env"]   // preset-env 是很多插件 配置的集合，我们这里 直接使用这个 配置 就可以了
+        }
+        ```
+    ----
+    分割线，下面开始讲解 babel 的用法推演 <br><br>
+
+    - 3.在 ```webpack.config.js```中 module.rules 增加 ```options: { presets: ["@babel/preset-env"] }```
+    - 4.```polyfill```
         - 在走完前面4步之后，还是有一些 对象 或 函数，在低版本的浏览器是没有的，所以这时候 **就要把这些缺失的函数补充进来**，这时候就要用到 ```polyfill``` 了
         - 安装 ```npm i @babel/polyfill -D```
         - 使用：
@@ -1136,7 +1232,7 @@ webpack4 各种语法 入门讲解
         - 存在的问题：
             - ```polyfill``` 配置完上面的步骤后，如果直接打包，会发现他把低版本浏览器缺失的函数和对象全都加载进来了，导致输出文件非常大。
             - 问题的解决如下：给 ```presets``` 添加选项 ```useBuiltIns: 'usage'```
-    - #### 6.业务代码 babel最佳配置
+    - #### 5.业务代码 babel最佳配置
         ```js
         // webpack.config.js
 
@@ -1149,21 +1245,21 @@ webpack4 各种语法 入门讲解
             },
             module: {
                 rules: [{
-                test: /\.js$/, 
-                exclude: /node_modules/,  // 排除 node_modules 目录的文件
-                loader: "babel-loader",
-                options: {
-                    presets: [[
-                        "@babel/preset-env", {
-                        targets: {
-                            edge: "17",
-                            firefox: "60",
-                            chrome: "67",
-                            safari: "11.1",
-                        },
-                        useBuiltIns: 'usage'    // 只添加 index.js 用到对象或函数
-                        // 当设置了 useBuiltIns: 'usage' 之后，业务代码就不必再次 import "@babel/polyfill"，因为它会自动引入
-                    }]]
+                    test: /\.js$/, 
+                    exclude: /node_modules/,  // 排除 node_modules 目录的文件
+                    loader: "babel-loader",
+                    options: {
+                        presets: [[
+                            "@babel/preset-env", {
+                            targets: {
+                                edge: "17",
+                                firefox: "60",
+                                chrome: "67",
+                                safari: "11.1",
+                            },
+                            useBuiltIns: 'usage'    // 只添加 index.js 用到对象或函数
+                            // 当设置了 useBuiltIns: 'usage' 之后，业务代码就不必再次 import "@babel/polyfill"，因为它会自动引入
+                        }]]
                 }}]
             },
             output: {
@@ -1172,7 +1268,7 @@ webpack4 各种语法 入门讲解
             }
         }
         ```
-    - #### 7.其他场景：开发类库、第三方模块、组件库
+    - #### 6.其他场景：开发类库、第三方模块、组件库
         - 1.存在的问题
             - 通过 ```import "@babel/polyfill"``` 这种方案实际是有问题的，因为 它在补充注入缺失的对象或者函数的时候，**是通过全局变量的形式，会污染到全局环境**。 解决方法如下
         - 2.安装
@@ -1189,16 +1285,16 @@ webpack4 各种语法 入门讲解
                 },
                 module: {
                     rules: [{
-                    test: /\.js$/, 
-                    exclude: /node_modules/,
-                    loader: "babel-loader",
-                    options: {
-                        "plugins": [["@babel/plugin-transform-runtime", {
-                            "corejs": 2,    // 默认为false, 值为2时，要多安装一个 @babel/runtime-corejs2 包
-                            "helpers": true,
-                            "regenerator": true,
-                            "useESModules": false
-                        }]]
+                        test: /\.js$/, 
+                        exclude: /node_modules/,
+                        loader: "babel-loader",
+                        options: {
+                            "plugins": [["@babel/plugin-transform-runtime", {
+                                "corejs": 2,    // 默认为false, 值为2时，要多安装一个 @babel/runtime-corejs2 包
+                                "helpers": true,
+                                "regenerator": true,
+                                "useESModules": false
+                            }]]
                     }}]
                 },
                 output: {
@@ -1231,11 +1327,12 @@ webpack4 各种语法 入门讲解
                 entry: {
                     main: './src/index.js'
                 },
-                module: {
+                module: {   // module 是模块的意思，这里 我们针对 不同的模块，做不同的解析
                     rules: [{
-                    test: /\.js$/, 
-                    exclude: /node_modules/,
-                    loader: "babel-loader"
+                        test: /\.js$/, 
+                        exclude: /node_modules/,              // 排除目录
+                        include: path.join(__dirname, 'src'), // 包括目录
+                        loader: "babel-loader"
                     }]
                 },
                 output: {
@@ -1245,7 +1342,7 @@ webpack4 各种语法 入门讲解
             }
             ```
             ```js
-            // .babelrc
+            // /.babelrc
             {
                 "plugins": [["@babel/plugin-transform-runtime", {
                     "corejs": 2,
@@ -1256,6 +1353,7 @@ webpack4 各种语法 入门讲解
             }
             ```
             注意：```.babelrc``` 文件中不能写注释
+    - 最后，再去验证一下 开头 那个 E6转ES5 的测试用例，是否能够成功转译
 - 3-13 Webpack 实现对React框架代码的打包
     - ... 暂不记录，请查阅视频讲解
 - ### 第3章 Webpack 的核心概念总结 最佳配置
@@ -5390,3 +5488,16 @@ webpack4 各种语法 入门讲解
             - 这时候，鼠标hover上去，或者在右边的 watch面板 添加 compilation，即可查看它有什么属性了
             - 实际上，我们在编写插件的时候，就是基于 node 调试工具，来编写的
 
+<br><br><br>
+
+- ### 6-4 Bundler 源码编写（模块分析 1）
+- ### 6-5 Bundler 源码编写（模块分析 2）
+- ### 6-6 Bundler 源码编写（ Dependencies Graph ）
+- ### 6-7 Bundler 源码编写（ 生成代码 ）
+
+
+## 第7章 Create-React-App 和 Vue-Cli 3.0脚手架工具配置分析
+- ### 7-1 通过 CreateReactApp 深入学习 Webpack 配置（1）
+- ### 7-2 通过 CreateReactApp 深入学习 Webpack 配置（2）
+- ### 7-3 Vue CLI 3 的配置方法及课程总结（1）
+- ### 7-4 Vue CLI 3 的配置方法及课程总结（2）
