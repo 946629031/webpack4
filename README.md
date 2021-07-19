@@ -1121,6 +1121,8 @@ npm i webpack --registry=https://registry.npm.taobao.org  // 淘宝镜像
 
 - ### 3-11 使用 ```Babel``` 处理 ES6 语法
     - [Babel 官网](https://babeljs.io/setup#installation)
+    - [babel 实时转译 演示 https://babeljs.io/repl](https://babeljs.io/repl)
+    - [babel配置-各阶段的stage的区别](https://blog.csdn.net/wang252949/article/details/79064046)
     - 什么是 babel ？
         - babel 是用来做 ES 语法，从高版本 转译成 低版本 的一个工具
         - 它不是 webpack 的一部分，只是 babel 可以提供一些 api，插件 可以用于 webpack 而已
